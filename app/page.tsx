@@ -7,6 +7,7 @@ import KanbanBoard from '@/components/KanbanBoard'
 import ImportModal from '@/components/ImportModal'
 import AddTodoModal from '@/components/AddTodoModal'
 import Toast from '@/components/Toast'
+import QrModal from '@/components/QrModal'
 
 type View = 'kanban' | 'list'
 
@@ -17,6 +18,7 @@ export default function Home() {
   const [activeTag, setActiveTag] = useState<TagType | 'all'>('all')
   const [view, setView] = useState<View>('kanban')
   const [showImport, setShowImport] = useState(false)
+  const [showQr, setShowQr] = useState(false)
   const [addStatus, setAddStatus] = useState<Status | null>(null)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' | 'info' } | null>(null)
 
@@ -89,6 +91,7 @@ export default function Home() {
         onStaffChange={setSelectedStaffId}
         onImportClick={() => setShowImport(true)}
         onAddClick={() => setAddStatus('todo')}
+        onQrClick={() => setShowQr(true)}
       />
 
       {/* Sub header */}
@@ -184,6 +187,7 @@ export default function Home() {
       </nav>
 
       {/* Modals */}
+      {showQr && <QrModal onClose={() => setShowQr(false)} />}
       {showImport && (
         <ImportModal onClose={() => setShowImport(false)} onImport={importTodos} />
       )}

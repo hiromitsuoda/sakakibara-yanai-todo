@@ -16,7 +16,7 @@ create table if not exists public.staff (
 insert into public.staff (id, name, color, initial) values
   ('tatsumoto', '立本', '#7c3aed', '立'),
   ('kaneko',    '金子', '#2563eb', '金'),
-  ('suzuki',    '鈴木', '#d97706', '鈴')
+  ('sakaki',    '榊原', '#dc2626', '榊')
 on conflict (id) do nothing;
 
 -- ── todos テーブル ──────────────────────────────────────────

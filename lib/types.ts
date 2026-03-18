@@ -39,7 +39,7 @@ export const STAFF_LIST: Staff[] = [
   { id: 'all',       name: '全員', color: '#0d9488', initial: '全' },
   { id: 'tatsumoto', name: '立本', color: '#7c3aed', initial: '立' },
   { id: 'kaneko',    name: '金子', color: '#2563eb', initial: '金' },
-  { id: 'suzuki',    name: '鈴木', color: '#d97706', initial: '鈴' },
+  { id: 'sakaki',    name: '榊原', color: '#dc2626', initial: '榊' },
 ]
 
 export const STATUS_CONFIG: Record<Status, { label: string; color: string; bgColor: string; borderColor: string; icon: string }> = {

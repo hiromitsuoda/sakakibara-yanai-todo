@@ -6,9 +6,10 @@ interface Props {
   onStaffChange: (id: string) => void
   onImportClick: () => void
   onAddClick: () => void
+  onQrClick: () => void
 }
 
-export default function Header({ selectedStaffId, onStaffChange, onImportClick, onAddClick }: Props) {
+export default function Header({ selectedStaffId, onStaffChange, onImportClick, onAddClick, onQrClick }: Props) {
   return (
     <header className="sticky top-0 z-50 bg-white border-b-2 border-teal-600 shadow-sm">
       <div className="flex items-center gap-3 px-4 h-14">
@@ -83,9 +84,13 @@ export default function Header({ selectedStaffId, onStaffChange, onImportClick, 
             <span>＋</span>
             <span>TODO</span>
           </button>
-          <div className="w-8 h-8 rounded-full bg-teal-600 text-white flex items-center justify-center text-xs font-bold cursor-pointer hover:bg-teal-700 transition-colors">
-            榊
-          </div>
+          <button
+            onClick={onQrClick}
+            title="QRコード"
+            className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-sm hover:bg-teal-50 hover:text-teal-600 transition-colors"
+          >
+            ▦
+          </button>
         </div>
       </div>
     </header>
