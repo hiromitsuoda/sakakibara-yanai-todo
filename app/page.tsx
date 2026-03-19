@@ -1,6 +1,6 @@
 'use client'
 import { useState, useMemo, useCallback, useEffect } from 'react'
-import type { Todo, Status, Staff } from '@/lib/types'
+import type { Todo, Status, Priority, TagType, Staff } from '@/lib/types'
 import { STATUS_CONFIG, TAG_CONFIG } from '@/lib/types'
 import { useStaff } from '@/lib/useStaff'
 import {
@@ -20,6 +20,17 @@ import TimelineView   from '@/components/TimelineView'
 import StaffMasterModal from '@/components/StaffMasterModal'
 
 type View = 'kanban' | 'list' | 'timeline'
+
+// ── localStorage ヘルパー ────────────────────────────────────
+const LS_KEY = 'todo_items'
+function loadFromLS(): Todo[] {
+  if (typeof window === 'undefined') return []
+  try { return JSON.parse(localStorage.getItem(LS_KEY) ?? '[]') } catch { return [] }
+}
+function saveToLS(todos: Todo[]) {
+  if (typeof window === 'undefined') return
+  try { localStorage.setItem(LS_KEY, JSON.stringify(todos)) } catch {}
+}
 
 /** 期限が過ぎた未完了 TODO を overdue に自動変換 */
 function applyOverdue(todos: Todo[]): Todo[] {
@@ -55,68 +66,118 @@ export default function Home() {
     setToast({ msg, type })
   }, [])
 
-  // ── Supabase 初期ロード ────────────────────────────────────
+  // ── 状態を更新して localStorage にも保存する共通関数 ────────
+  const persist = useCallback((updater: (prev: Todo[]) => Todo[]) => {
+    setTodos((prev) => {
+      const next = applyOverdue(updater(prev))
+      saveToLS(next)
+      return next
+    })
+  }, [])
+
+  // ── 初期ロード: LS → Supabase の順で読み込む ───────────────
   useEffect(() => {
+    // 1. localStorage から即時表示
+    const lsData = loadFromLS()
+    if (lsData.length > 0) {
+      setTodos(applyOverdue(lsData))
+      setLoading(false)
+    }
+
+    // 2. Supabase と同期（成功すれば LS を上書き）
     fetchTodosFromDB()
-      .then((data) => setTodos(applyOverdue(data)))
-      .catch(() => showToast('データの取得に失敗しました', 'error'))
+      .then((data) => {
+        const processed = applyOverdue(data)
+        setTodos(processed)
+        saveToLS(processed)
+      })
+      .catch(() => {
+        // Supabase 未接続でも LS データで動作継続
+        if (lsData.length === 0) showToast('オフラインモードで動作中', 'info')
+      })
       .finally(() => setLoading(false))
   }, [showToast])
 
   // ── CRUD ──────────────────────────────────────────────────
+
   const updateTodo = useCallback((id: string, updates: Partial<Todo>) => {
-    setTodos((prev) =>
-      applyOverdue(
-        prev.map((t) => (t.id === id ? { ...t, ...updates, updated_at: new Date().toISOString() } : t)),
-      ),
-    )
-    if (updates.status === 'done')          showToast('✅ 完了にしました')
-    else if (updates.comment !== undefined)  showToast('💬 メモを保存しました')
-    else                                     showToast('更新しました')
-    updateTodoDB(id, updates).catch(() => showToast('保存に失敗しました', 'error'))
-  }, [showToast])
+    persist((prev) => prev.map((t) => t.id === id ? { ...t, ...updates } : t))
+    if (updates.status === 'done')         showToast('✅ 完了にしました')
+    else if (updates.comment !== undefined) showToast('💬 メモを保存しました')
+    else                                    showToast('更新しました')
+    // DB バックグラウンド同期（失敗しても LS には保存済み）
+    updateTodoDB(id, updates).catch(() => {})
+  }, [persist, showToast])
 
   const deleteTodo = useCallback((id: string) => {
-    setTodos((prev) => prev.filter((t) => t.id !== id))
+    persist((prev) => prev.filter((t) => t.id !== id))
     showToast('削除しました', 'info')
-    deleteTodoDB(id).catch(() => showToast('削除に失敗しました', 'error'))
-  }, [showToast])
+    deleteTodoDB(id).catch(() => {})
+  }, [persist, showToast])
 
   const addTodo = useCallback(async (todoData: Omit<Todo, 'id' | 'created_at' | 'updated_at'>) => {
-    try {
-      const newTodo = await createTodoDB(todoData)
-      setTodos((prev) => applyOverdue([newTodo, ...prev]))
-      showToast('📋 TODOを作成しました')
-    } catch {
-      showToast('作成に失敗しました', 'error')
+    // 楽観的追加（DB 結果を待たずに即時表示）
+    const tempId = `temp_${Date.now()}`
+    const optimistic: Todo = {
+      ...todoData, id: tempId,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     }
-  }, [showToast])
+    persist((prev) => [optimistic, ...prev])
+    showToast('📋 TODOを作成しました')
+
+    // DB に保存してから ID を正規 UUID に差し替え
+    try {
+      const saved = await createTodoDB(todoData)
+      persist((prev) => prev.map((t) => t.id === tempId ? saved : t))
+    } catch { /* LS の tempId のまま保持 */ }
+  }, [persist, showToast])
 
   const importTodos = useCallback(async (newTodos: Partial<Todo>[]) => {
-    const results: Todo[] = []
-    for (const t of newTodos) {
+    if (newTodos.length === 0) return
+
+    // 楽観的追加（全件を即時画面反映）
+    const tempItems: Todo[] = newTodos.map((t) => ({
+      id:          `temp_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+      link_no:     t.link_no,
+      title:       t.title ?? '',
+      detail:      t.detail,
+      task:        t.task,
+      staff_id:    t.staff_id ?? 'unknown',
+      status:      (t.status ?? 'todo') as Status,
+      priority:    (t.priority ?? '中') as Priority,
+      tags:        (t.tags ?? []) as TagType[],
+      deadline:    t.deadline,
+      start_time:  t.start_time,
+      end_time:    t.end_time,
+      comment:     '',
+      attachments: [],
+      created_at:  new Date().toISOString(),
+      updated_at:  new Date().toISOString(),
+    }))
+
+    persist((prev) => [...tempItems, ...prev])
+    showToast(`📥 ${tempItems.length}件を取込みました`)
+
+    // DB への保存はバックグラウンドで実行
+    for (let i = 0; i < tempItems.length; i++) {
+      const temp = tempItems[i]
+      const t    = newTodos[i]
       try {
-        const created = await createTodoDB({
-          link_no:     t.link_no,
-          title:       t.title ?? '',
-          detail:      t.detail,
-          task:        t.task,
-          staff_id:    t.staff_id ?? 'unknown',
-          status:      t.status ?? 'todo',
-          priority:    t.priority ?? '中',
-          tags:        t.tags ?? [],
-          deadline:    t.deadline,
-          start_time:  t.start_time,
-          end_time:    t.end_time,
-          comment:     '',
-          attachments: [],
+        const saved = await createTodoDB({
+          link_no: t.link_no, title: t.title ?? '',
+          detail: t.detail, task: t.task,
+          staff_id: t.staff_id ?? 'unknown',
+          status: t.status ?? 'todo', priority: t.priority ?? '中',
+          tags: t.tags ?? [], deadline: t.deadline,
+          start_time: t.start_time, end_time: t.end_time,
+          comment: '', attachments: [],
         })
-        results.push(created)
-      } catch { /* スキップ */ }
+        // temp ID → 正規 UUID に差し替え
+        persist((prev) => prev.map((x) => x.id === temp.id ? saved : x))
+      } catch { /* LS の tempId のまま保持 */ }
     }
-    setTodos((prev) => applyOverdue([...results, ...prev]))
-    showToast(`📥 ${results.length}件を取込みました`)
-  }, [showToast])
+  }, [persist, showToast])
 
   // ── Edit handler ──────────────────────────────────────────
   const handleEdit = useCallback((id: string) => {
