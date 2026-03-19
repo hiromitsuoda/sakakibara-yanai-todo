@@ -1,7 +1,7 @@
 'use client'
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import type { Todo, Status, Priority, TagType, Staff } from '@/lib/types'
-import { STATUS_CONFIG, TAG_CONFIG } from '@/lib/types'
+import { STATUS_CONFIG } from '@/lib/types'
 import { useStaff } from '@/lib/useStaff'
 import {
   fetchTodos as fetchTodosFromDB,
@@ -192,11 +192,13 @@ export default function Home() {
   const filteredTodos = useMemo(() => {
     return todos.filter((t) => {
       const matchStaff  = selectedStaffId === 'all' || t.staff_id === selectedStaffId
-      const q           = searchQuery.toLowerCase()
+      // # を除去してLink番号にもマッチ
+      const q           = searchQuery.toLowerCase().replace(/^#/, '')
       const matchSearch = !q
         || t.title.toLowerCase().includes(q)
         || (t.link_no ?? '').includes(q)
         || (t.detail ?? '').toLowerCase().includes(q)
+        || (t.task ?? '').toLowerCase().includes(q)
       return matchStaff && matchSearch
     })
   }, [todos, selectedStaffId, searchQuery])
@@ -436,15 +438,6 @@ function ListView({
                           {todo.title}
                         </p>
                         <div className="flex items-center gap-2 mt-0.5">
-                          {todo.tags.map((tag) => (
-                            <span
-                              key={tag}
-                              className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                              style={{ background: TAG_CONFIG[tag].bg, color: TAG_CONFIG[tag].text }}
-                            >
-                              {tag}
-                            </span>
-                          ))}
                           {todo.deadline && (
                             <span className={`text-[11px] ${todo.status === 'overdue' ? 'text-red-600 font-bold' : 'text-slate-400'}`}>
                               📅 {todo.deadline}

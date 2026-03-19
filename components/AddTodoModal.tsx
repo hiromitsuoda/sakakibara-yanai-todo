@@ -1,7 +1,6 @@
 'use client'
 import { useState } from 'react'
-import type { Todo, Status, Priority, TagType, Staff } from '@/lib/types'
-import { TAG_CONFIG } from '@/lib/types'
+import type { Todo, Status, Priority, Staff } from '@/lib/types'
 
 interface Props {
   defaultStatus?: Status
@@ -17,8 +16,6 @@ const STATUS_OPTIONS: { value: Status; label: string; icon: string }[] = [
   { value: 'done',    label: '完了',     icon: '✅' },
   { value: 'overdue', label: '期限超過', icon: '⚠️' },
 ]
-const ALL_TAGS: TagType[] = ['許可申請', '変更届', '相談対応', '法人', '更新', 'その他']
-
 export default function AddTodoModal({ defaultStatus = 'todo', staffList, onClose, onAdd }: Props) {
   const [linkNo,   setLinkNo]   = useState('')
   const [title,    setTitle]    = useState('')
@@ -28,14 +25,7 @@ export default function AddTodoModal({ defaultStatus = 'todo', staffList, onClos
   const [staffId,  setStaffId]  = useState(staffList.filter((s) => s.id !== 'all')[0]?.id ?? '')
   const [priority, setPriority] = useState<Priority>('中')
   const [status,   setStatus]   = useState<Status>(defaultStatus)
-  const [tags,     setTags]     = useState<TagType[]>([])
   const [errors,   setErrors]   = useState<string[]>([])
-
-  const toggleTag = (tag: TagType) => {
-    setTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
-    )
-  }
 
   const handleSubmit = () => {
     const errs: string[] = []
@@ -51,7 +41,7 @@ export default function AddTodoModal({ defaultStatus = 'todo', staffList, onClos
       staff_id:    staffId,
       status,
       priority,
-      tags,
+      tags:        [],
       deadline:    deadline.replace(/-/g, '/'),
       comment:     '',
       attachments: [],
@@ -196,33 +186,6 @@ export default function AddTodoModal({ defaultStatus = 'todo', staffList, onClos
                   {icon} {label}
                 </button>
               ))}
-            </div>
-          </div>
-
-          {/* Tags */}
-          <div>
-            <label className="text-xs font-bold text-slate-500 block mb-1.5">タグ（任意）</label>
-            <div className="flex flex-wrap gap-2">
-              {ALL_TAGS.map((tag) => {
-                const cfg = TAG_CONFIG[tag]
-                const active = tags.includes(tag)
-                return (
-                  <button
-                    key={tag}
-                    onClick={() => toggleTag(tag)}
-                    className={`text-xs font-bold px-3 py-1.5 rounded-full border transition-all ${
-                      active ? 'ring-2 ring-offset-1 ring-teal-500' : 'opacity-50 hover:opacity-80'
-                    }`}
-                    style={{
-                      background:  active ? cfg.bg : '#f1f5f9',
-                      color:       active ? cfg.text : '#64748b',
-                      borderColor: active ? cfg.text : 'transparent',
-                    }}
-                  >
-                    {active ? '✓ ' : ''}{tag}
-                  </button>
-                )
-              })}
             </div>
           </div>
 

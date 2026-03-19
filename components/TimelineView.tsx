@@ -163,9 +163,6 @@ export default function TimelineView({ todos, staffList, onUpdate, onDelete, onE
                                 todo.priority === '中' ? 'bg-amber-50 text-amber-600' :
                                 'bg-green-50 text-green-600'
                               }`}>{todo.priority}</span>
-                              {todo.attachments.some((a) => a.name.includes('見積')) && (
-                                <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-bold">📄 見積書</span>
-                              )}
                               {todo.comment && <span className="text-slate-400 text-[11px]">💬</span>}
                             </div>
                           </div>

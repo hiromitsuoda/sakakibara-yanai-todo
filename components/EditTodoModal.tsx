@@ -1,7 +1,6 @@
 'use client'
 import { useState } from 'react'
-import type { Todo, Status, Priority, TagType, Staff } from '@/lib/types'
-import { TAG_CONFIG } from '@/lib/types'
+import type { Todo, Status, Priority, Staff } from '@/lib/types'
 
 interface Props {
   todo: Todo
@@ -17,8 +16,6 @@ const STATUS_OPTIONS: { value: Status; label: string; icon: string }[] = [
   { value: 'done',    label: '完了',     icon: '✅' },
   { value: 'overdue', label: '期限超過', icon: '⚠️' },
 ]
-const ALL_TAGS: TagType[] = ['許可申請', '変更届', '相談対応', '法人', '更新', 'その他']
-
 export default function EditTodoModal({ todo, staffList, onClose, onSave }: Props) {
   const [linkNo,   setLinkNo]   = useState(todo.link_no ?? '')
   const [title,    setTitle]    = useState(todo.title)
@@ -30,14 +27,7 @@ export default function EditTodoModal({ todo, staffList, onClose, onSave }: Prop
   const [staffId,  setStaffId]  = useState(todo.staff_id)
   const [priority, setPriority] = useState<Priority>(todo.priority)
   const [status,   setStatus]   = useState<Status>(todo.status)
-  const [tags,     setTags]     = useState<TagType[]>(todo.tags ?? [])
   const [errors,   setErrors]   = useState<string[]>([])
-
-  const toggleTag = (tag: TagType) => {
-    setTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
-    )
-  }
 
   const handleSave = () => {
     const errs: string[] = []
@@ -53,7 +43,6 @@ export default function EditTodoModal({ todo, staffList, onClose, onSave }: Prop
       staff_id: staffId,
       priority,
       status,
-      tags,
     })
     onClose()
   }
@@ -192,35 +181,6 @@ export default function EditTodoModal({ todo, staffList, onClose, onSave }: Prop
                   {icon} {label}
                 </button>
               ))}
-            </div>
-          </div>
-
-          {/* Tags */}
-          <div>
-            <label className="text-xs font-bold text-slate-500 block mb-1.5">タグ</label>
-            <div className="flex flex-wrap gap-2">
-              {ALL_TAGS.map((tag) => {
-                const cfg = TAG_CONFIG[tag]
-                const active = tags.includes(tag)
-                return (
-                  <button
-                    key={tag}
-                    onClick={() => toggleTag(tag)}
-                    className={`text-xs font-bold px-3 py-1.5 rounded-full border transition-all ${
-                      active
-                        ? 'ring-2 ring-offset-1 ring-teal-500'
-                        : 'opacity-50 hover:opacity-80'
-                    }`}
-                    style={{
-                      background: active ? cfg.bg : '#f1f5f9',
-                      color:      active ? cfg.text : '#64748b',
-                      borderColor: active ? cfg.text : 'transparent',
-                    }}
-                  >
-                    {active ? '✓ ' : ''}{tag}
-                  </button>
-                )
-              })}
             </div>
           </div>
 

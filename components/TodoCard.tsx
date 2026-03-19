@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import type { Todo, Status, Staff } from '@/lib/types'
-import { STATUS_CONFIG, TAG_CONFIG } from '@/lib/types'
+import { STATUS_CONFIG } from '@/lib/types'
 
 interface Props {
   todo: Todo
@@ -79,22 +79,21 @@ export default function TodoCard({ todo, staffList, onUpdate, onDelete, onEdit }
         </div>
 
         {/* Title */}
-        <p className={`text-sm font-semibold leading-snug mb-2 ${isDone ? 'line-through text-slate-400' : 'text-slate-800'}`}>
+        <p className={`text-sm font-semibold leading-snug mb-1.5 ${isDone ? 'line-through text-slate-400' : 'text-slate-800'}`}>
           {todo.title}
         </p>
 
-        {/* Tags */}
-        <div className="flex flex-wrap gap-1 mb-2">
-          {todo.tags.map((tag) => (
-            <span
-              key={tag}
-              className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-              style={{ background: TAG_CONFIG[tag].bg, color: TAG_CONFIG[tag].text }}
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
+        {/* 予定詳細 */}
+        {todo.detail && (
+          <p className="text-[11px] text-slate-500 leading-snug mb-1 line-clamp-2">{todo.detail}</p>
+        )}
+
+        {/* メモ */}
+        {todo.task && (
+          <p className="text-[11px] text-slate-400 bg-slate-50 rounded px-2 py-0.5 mb-1.5 truncate">
+            📝 {todo.task}
+          </p>
+        )}
 
         {/* Footer */}
         <div className="flex items-center gap-2 text-[11px]">
