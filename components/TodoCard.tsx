@@ -189,7 +189,7 @@ export default function TodoCard({ todo, staffList, onUpdate, onDelete, onEdit }
           <div className="flex items-center gap-2 justify-between">
             <div className="flex gap-1.5">
               <button
-                onClick={() => onDelete(todo.id)}
+                onClick={() => { if (confirm(`「${todo.title}」を削除しますか？`)) onDelete(todo.id) }}
                 className="text-[11px] px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-400 hover:border-red-300 hover:text-red-500 transition-all"
               >
                 削除

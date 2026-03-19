@@ -489,7 +489,7 @@ function ListView({
                         />
                         <div className="flex justify-end gap-2">
                           <button
-                            onClick={() => onDelete(todo.id)}
+                            onClick={() => { if (confirm(`「${todo.title}」を削除しますか？`)) onDelete(todo.id) }}
                             className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-red-500"
                           >
                             削除
