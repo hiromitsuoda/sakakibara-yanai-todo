@@ -1,6 +1,6 @@
 'use client'
 import { useState, useMemo, useCallback } from 'react'
-import type { Todo, Status, TagType } from '@/lib/types'
+import type { Todo, Status } from '@/lib/types'
 import { MOCK_TODOS } from '@/data/mockData'
 import Header from '@/components/Header'
 import KanbanBoard from '@/components/KanbanBoard'
@@ -8,14 +8,14 @@ import ImportModal from '@/components/ImportModal'
 import AddTodoModal from '@/components/AddTodoModal'
 import Toast from '@/components/Toast'
 import QrModal from '@/components/QrModal'
+import TimelineView from '@/components/TimelineView'
 
-type View = 'kanban' | 'list'
+type View = 'kanban' | 'list' | 'timeline'
 
 export default function Home() {
   const [todos, setTodos] = useState<Todo[]>(MOCK_TODOS)
   const [selectedStaffId, setSelectedStaffId] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
-  const [activeTag, setActiveTag] = useState<TagType | 'all'>('all')
   const [view, setView] = useState<View>('kanban')
   const [showImport, setShowImport] = useState(false)
   const [showQr, setShowQr] = useState(false)
@@ -66,12 +66,11 @@ export default function Home() {
   const filteredTodos = useMemo(() => {
     return todos.filter((t) => {
       const matchStaff = selectedStaffId === 'all' || t.staff_id === selectedStaffId
-      const matchTag = activeTag === 'all' || t.tags.includes(activeTag)
       const q = searchQuery.toLowerCase()
       const matchSearch = !q || t.title.toLowerCase().includes(q) || (t.link_no ?? '').includes(q) || (t.detail ?? '').toLowerCase().includes(q)
-      return matchStaff && matchTag && matchSearch
+      return matchStaff && matchSearch
     })
-  }, [todos, selectedStaffId, activeTag, searchQuery])
+  }, [todos, selectedStaffId, searchQuery])
 
   // ── Counts ────────────────────────────────────────────────
   const counts = useMemo(() => ({
@@ -80,8 +79,6 @@ export default function Home() {
     doing:   todos.filter((t) => t.status === 'doing').length,
     done:    todos.filter((t) => t.status === 'done').length,
   }), [todos])
-
-  const TAG_OPTIONS: (TagType | 'all')[] = ['all', '許可申請', '変更届', '相談対応', '法人', '更新', 'その他']
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
@@ -108,37 +105,24 @@ export default function Home() {
           />
         </div>
 
-        {/* Tag filter pills */}
-        <div className="flex gap-1.5 flex-wrap">
-          {TAG_OPTIONS.map((tag) => (
-            <button
-              key={tag}
-              onClick={() => setActiveTag(tag)}
-              className={`px-3 py-1 rounded-full text-xs font-semibold transition-all border ${
-                activeTag === tag
-                  ? 'bg-teal-600 text-white border-teal-600'
-                  : 'bg-white text-slate-500 border-slate-200 hover:border-teal-300 hover:text-teal-600'
-              }`}
-            >
-              {tag === 'all' ? `全件 (${todos.length})` : tag}
-            </button>
-          ))}
-        </div>
+        {/* 件数バッジ */}
+        <span className="text-xs text-slate-500 font-semibold">全 {todos.length} 件</span>
 
         {/* View toggle */}
         <div className="ml-auto flex bg-slate-100 rounded-lg p-0.5 gap-0.5">
-          <button
-            onClick={() => setView('kanban')}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${view === 'kanban' ? 'bg-white text-teal-700 shadow-sm' : 'text-slate-500'}`}
-          >
-            カンバン
-          </button>
-          <button
-            onClick={() => setView('list')}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${view === 'list' ? 'bg-white text-teal-700 shadow-sm' : 'text-slate-500'}`}
-          >
-            リスト
-          </button>
+          {([
+            { key: 'kanban',   label: 'カンバン' },
+            { key: 'timeline', label: 'タイムライン' },
+            { key: 'list',     label: 'リスト' },
+          ] as { key: View; label: string }[]).map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setView(key)}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${view === key ? 'bg-white text-teal-700 shadow-sm' : 'text-slate-500'}`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -157,7 +141,7 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Board / List */}
+      {/* Board / Timeline / List */}
       <div className="flex-1 overflow-auto">
         {view === 'kanban' ? (
           <KanbanBoard
@@ -166,6 +150,8 @@ export default function Home() {
             onDelete={deleteTodo}
             onAddClick={(s) => setAddStatus(s)}
           />
+        ) : view === 'timeline' ? (
+          <TimelineView todos={filteredTodos} onUpdate={updateTodo} onDelete={deleteTodo} />
         ) : (
           <ListView todos={filteredTodos} onUpdate={updateTodo} onDelete={deleteTodo} />
         )}
