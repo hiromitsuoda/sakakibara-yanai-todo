@@ -58,6 +58,9 @@ export default function Home() {
   const [addStatus,     setAddStatus]     = useState<Status | null>(null)
   const [editingTodo,   setEditingTodo]   = useState<Todo | null>(null)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' | 'info' } | null>(null)
+  const [filterMode, setFilterMode] = useState<'active' | 'range'>('active')
+  const [dateFrom,   setDateFrom]   = useState('')
+  const [dateTo,     setDateTo]     = useState('')
 
   // ── 担当者マスター ──────────────────────────────────────────
   const { staffList, addStaff, updateStaff, deleteStaff, resolveStaffId } = useStaff()
@@ -201,16 +204,28 @@ export default function Home() {
   const filteredTodos = useMemo(() => {
     return todos.filter((t) => {
       const matchStaff  = selectedStaffId === 'all' || t.staff_id === selectedStaffId
-      // # を除去してLink番号にもマッチ
       const q           = searchQuery.toLowerCase().replace(/^#/, '')
       const matchSearch = !q
         || t.title.toLowerCase().includes(q)
         || (t.link_no ?? '').includes(q)
         || (t.detail ?? '').toLowerCase().includes(q)
         || (t.task ?? '').toLowerCase().includes(q)
-      return matchStaff && matchSearch
+
+      if (filterMode === 'active') {
+        // ① 完了以外（期間指定なし）
+        return matchStaff && matchSearch && t.status !== 'done'
+      } else {
+        // ② 期間指定・全ステータス
+        let matchDate = true
+        if (t.deadline) {
+          const dl = t.deadline.replace(/\//g, '-') // YYYY-MM-DD
+          if (dateFrom && dl < dateFrom) matchDate = false
+          if (dateTo   && dl > dateTo)   matchDate = false
+        }
+        return matchStaff && matchSearch && matchDate
+      }
     })
-  }, [todos, selectedStaffId, searchQuery])
+  }, [todos, selectedStaffId, searchQuery, filterMode, dateFrom, dateTo])
 
   // ── Counts ────────────────────────────────────────────────
   const counts = useMemo(() => ({
@@ -234,48 +249,97 @@ export default function Home() {
       />
 
       {/* Sub header */}
-      <div className="bg-white border-b border-slate-200 px-4 py-2.5 flex items-center gap-3 flex-wrap">
-        {/* Search */}
-        <div className="relative">
-          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🔍</span>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="案件・担当者・Link番号で検索..."
-            className="pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg w-52 focus:border-teal-500 focus:outline-none bg-slate-50"
-          />
-        </div>
+      <div className="bg-white border-b border-slate-200 px-4 py-2.5 space-y-2">
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Search */}
+          <div className="relative">
+            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🔍</span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="案件・担当者・Link番号で検索..."
+              className="pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg w-52 focus:border-teal-500 focus:outline-none bg-slate-50"
+            />
+          </div>
 
-        {/* 件数バッジ */}
-        <span className="text-xs text-slate-500 font-semibold">全 {todos.length} 件</span>
-
-        {/* 全件削除（テスト用） */}
-        {todos.length > 0 && (
-          <button
-            onClick={deleteAllTodos}
-            className="text-xs px-2.5 py-1 border border-red-200 text-red-400 rounded-lg hover:bg-red-50 hover:text-red-600 hover:border-red-400 transition-all"
-          >
-            🗑 全件削除
-          </button>
-        )}
-
-        {/* View toggle */}
-        <div className="ml-auto flex bg-slate-100 rounded-lg p-0.5 gap-0.5">
-          {([
-            { key: 'kanban',   label: 'カンバン' },
-            { key: 'timeline', label: 'タイムライン' },
-            { key: 'list',     label: 'リスト' },
-          ] as { key: View; label: string }[]).map(({ key, label }) => (
+          {/* フィルターモード切替 */}
+          <div className="flex bg-slate-100 rounded-lg p-0.5 gap-0.5">
             <button
-              key={key}
-              onClick={() => setView(key)}
-              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${view === key ? 'bg-white text-teal-700 shadow-sm' : 'text-slate-500'}`}
+              onClick={() => setFilterMode('active')}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${filterMode === 'active' ? 'bg-white text-teal-700 shadow-sm' : 'text-slate-500'}`}
             >
-              {label}
+              ① 完了以外
             </button>
-          ))}
+            <button
+              onClick={() => setFilterMode('range')}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${filterMode === 'range' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500'}`}
+            >
+              ② 期間指定
+            </button>
+          </div>
+
+          {/* 件数バッジ */}
+          <span className="text-xs text-slate-500 font-semibold">
+            {filteredTodos.length} 件{filterMode === 'active' ? '（完了除く）' : ''}
+          </span>
+
+          {/* 全件削除（テスト用） */}
+          {todos.length > 0 && (
+            <button
+              onClick={deleteAllTodos}
+              className="text-xs px-2.5 py-1 border border-red-200 text-red-400 rounded-lg hover:bg-red-50 hover:text-red-600 hover:border-red-400 transition-all"
+            >
+              🗑 全件削除
+            </button>
+          )}
+
+          {/* View toggle */}
+          <div className="ml-auto flex bg-slate-100 rounded-lg p-0.5 gap-0.5">
+            {([
+              { key: 'kanban',   label: 'カンバン' },
+              { key: 'timeline', label: 'タイムライン' },
+              { key: 'list',     label: 'リスト' },
+            ] as { key: View; label: string }[]).map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setView(key)}
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${view === key ? 'bg-white text-teal-700 shadow-sm' : 'text-slate-500'}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {/* ② 期間指定: 日付入力 */}
+        {filterMode === 'range' && (
+          <div className="flex items-center gap-2 text-xs text-slate-600">
+            <span className="text-blue-600 font-semibold">📅 期間：</span>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="border border-slate-200 rounded-lg px-2 py-1 text-xs focus:border-blue-400 focus:outline-none bg-slate-50"
+            />
+            <span className="text-slate-400">〜</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="border border-slate-200 rounded-lg px-2 py-1 text-xs focus:border-blue-400 focus:outline-none bg-slate-50"
+            />
+            {(dateFrom || dateTo) && (
+              <button
+                onClick={() => { setDateFrom(''); setDateTo('') }}
+                className="text-slate-400 hover:text-slate-600 text-xs px-1.5 py-0.5 rounded hover:bg-slate-100"
+              >
+                クリア
+              </button>
+            )}
+            <span className="text-slate-400 ml-1">（全ステータス表示）</span>
+          </div>
+        )}
       </div>
 
       {/* KPI strip */}
