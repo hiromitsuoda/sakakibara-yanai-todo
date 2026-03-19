@@ -14,11 +14,11 @@ type Step = 'select' | 'preview' | 'done'
 interface ParsedRow {
   link_no: string
   title: string
-  detail: string
+  detail: string   // col[7] 予定詳細
+  task: string     // col[8] メモ → カードに表示
   deadline: string
   start_time: string
   end_time: string
-  comment: string
   staff_name: string
   staff_id: string
   priority: Priority
@@ -119,8 +119,8 @@ function parseCsvText(text: string, resolveStaffId: (name: string) => string): P
     const start_time = normalizeTime(cols[3] ?? '')
     const endDate    = normalizeDate(cols[4] ?? '')
     const end_time   = normalizeTime(cols[5] ?? '')
-    const detail     = (cols[7] ?? '').trim()
-    const comment    = (cols[8] ?? '').trim()
+    const detail     = (cols[7] ?? '').trim()  // 予定詳細
+    const task       = (cols[8] ?? '').trim()  // メモ → todoのtaskフィールドへ
     const staff_name = (cols[9] ?? '').trim()
     const staff_id   = resolveStaffId(staff_name)
 
@@ -131,10 +131,10 @@ function parseCsvText(text: string, resolveStaffId: (name: string) => string): P
       link_no,
       title,
       detail,
+      task,
       deadline,
       start_time,
       end_time,
-      comment,
       staff_name,
       staff_id,
       priority: '中',
@@ -149,26 +149,26 @@ function parseCsvText(text: string, resolveStaffId: (name: string) => string): P
 const DEMO_ROWS: ParsedRow[] = [
   {
     link_no: '4200', title: '【建設業許可】新規許可申請（土木工事業）',
-    detail: '', deadline: '2026/04/05', start_time: '', end_time: '',
-    comment: '', staff_name: '榊原', staff_id: 'sakaki',
+    detail: '', task: '', deadline: '2026/04/05', start_time: '', end_time: '',
+    staff_name: '榊原', staff_id: 'sakaki',
     priority: '高', tags: ['許可申請'],
   },
   {
     link_no: '4201', title: '【産廃】中間処理業 新規許可申請',
-    detail: '', deadline: '2026/04/10', start_time: '', end_time: '',
-    comment: '', staff_name: '柳井', staff_id: 'yanai',
+    detail: '', task: '', deadline: '2026/04/10', start_time: '', end_time: '',
+    staff_name: '柳井', staff_id: 'yanai',
     priority: '中', tags: ['許可申請'],
   },
   {
     link_no: '4202', title: '【建設業許可】決算変更届出（令和6年度）',
-    detail: '', deadline: '2026/04/30', start_time: '', end_time: '',
-    comment: '', staff_name: '榊原', staff_id: 'sakaki',
+    detail: '', task: '', deadline: '2026/04/30', start_time: '', end_time: '',
+    staff_name: '榊原', staff_id: 'sakaki',
     priority: '低', tags: ['変更届'],
   },
   {
     link_no: '4203', title: '相続財産管理 戸籍・登記確認',
-    detail: '', deadline: '2026/04/15', start_time: '', end_time: '',
-    comment: '', staff_name: '山本', staff_id: 'yamamoto',
+    detail: '', task: '', deadline: '2026/04/15', start_time: '', end_time: '',
+    staff_name: '山本', staff_id: 'yamamoto',
     priority: '低', tags: ['相談対応'],
   },
 ]
@@ -239,10 +239,10 @@ export default function ImportModal({ onClose, onImport, resolveStaffId }: Props
         link_no:     row.link_no || undefined,
         title:       row.title,
         detail:      row.detail || undefined,
+        task:        row.task || undefined,
         deadline:    row.deadline || undefined,
         start_time:  row.start_time || undefined,
         end_time:    row.end_time || undefined,
-        comment:     row.comment,
         staff_id:    row.staff_id,
         status:      'todo' as const,
         priority:    row.priority,
