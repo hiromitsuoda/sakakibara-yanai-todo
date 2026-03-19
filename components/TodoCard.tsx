@@ -8,6 +8,7 @@ interface Props {
   staffList: Staff[]
   onUpdate: (id: string, updates: Partial<Todo>) => void
   onDelete: (id: string) => void
+  onEdit:   (id: string) => void
 }
 
 const STATUS_NEXT: Record<Status, { label: string; next: Status } | null> = {
@@ -17,7 +18,7 @@ const STATUS_NEXT: Record<Status, { label: string; next: Status } | null> = {
   done:    null,
 }
 
-export default function TodoCard({ todo, staffList, onUpdate, onDelete }: Props) {
+export default function TodoCard({ todo, staffList, onUpdate, onDelete, onEdit }: Props) {
   const [open, setOpen] = useState(false)
   const [comment, setComment] = useState(todo.comment ?? '')
   const [saving, setSaving] = useState(false)
@@ -192,6 +193,12 @@ export default function TodoCard({ todo, staffList, onUpdate, onDelete }: Props)
                 className="text-[11px] px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-400 hover:border-red-300 hover:text-red-500 transition-all"
               >
                 削除
+              </button>
+              <button
+                onClick={() => { onEdit(todo.id) }}
+                className="text-[11px] px-2.5 py-1.5 rounded-lg border border-slate-200 text-blue-500 hover:bg-blue-50 hover:border-blue-300 transition-all"
+              >
+                ✏ 編集
               </button>
               <button
                 onClick={handleSaveComment}

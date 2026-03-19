@@ -35,12 +35,20 @@ export interface Todo {
   updated_at: string
 }
 
-export const STAFF_LIST: Staff[] = [
-  { id: 'all',       name: '全員', color: '#0d9488', initial: '全' },
-  { id: 'tatsumoto', name: '立本', color: '#7c3aed', initial: '立' },
-  { id: 'kaneko',    name: '金子', color: '#2563eb', initial: '金' },
-  { id: 'sakaki',    name: '榊原', color: '#dc2626', initial: '榊' },
+/** アプリ初期値のスタッフ一覧（localStorageが空のときに使用） */
+export const DEFAULT_STAFF_LIST: Staff[] = [
+  { id: 'all',       name: '全員',   color: '#0d9488', initial: '全' },
+  { id: 'tatsumoto', name: '立本',   color: '#7c3aed', initial: '立' },
+  { id: 'kaneko',    name: '金子',   color: '#2563eb', initial: '金' },
+  { id: 'sakaki',    name: '榊原',   color: '#dc2626', initial: '榊' },
+  { id: 'yanai',     name: '柳井',   color: '#0891b2', initial: '柳' },
+  { id: 'yamamoto',  name: '山本',   color: '#65a30d', initial: '山' },
+  { id: 'other',     name: 'その他', color: '#94a3b8', initial: '他' },
+  { id: 'unknown',   name: '不明',   color: '#cbd5e1', initial: '？' },
 ]
+
+/** 後方互換のため残す（直接参照は非推奨 → useStaff() を使うこと） */
+export const STAFF_LIST: Staff[] = DEFAULT_STAFF_LIST
 
 export const STATUS_CONFIG: Record<Status, { label: string; color: string; bgColor: string; borderColor: string; icon: string }> = {
   overdue: { label: '期限超過', color: '#dc2626', bgColor: '#fef2f2', borderColor: '#fecaca', icon: '⚠' },

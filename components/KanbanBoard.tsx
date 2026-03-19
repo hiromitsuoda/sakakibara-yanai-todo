@@ -8,12 +8,13 @@ interface Props {
   staffList: Staff[]
   onUpdate: (id: string, updates: Partial<Todo>) => void
   onDelete: (id: string) => void
+  onEdit:   (id: string) => void
   onAddClick: (status: Status) => void
 }
 
 const COLUMNS: Status[] = ['overdue', 'todo', 'doing', 'done']
 
-export default function KanbanBoard({ todos, staffList, onUpdate, onDelete, onAddClick }: Props) {
+export default function KanbanBoard({ todos, staffList, onUpdate, onDelete, onEdit, onAddClick }: Props) {
   return (
     <div className="board-scroll flex gap-4 p-4 h-full min-h-0">
       {COLUMNS.map((status) => {
@@ -57,6 +58,7 @@ export default function KanbanBoard({ todos, staffList, onUpdate, onDelete, onAd
                   staffList={staffList}
                   onUpdate={onUpdate}
                   onDelete={onDelete}
+                  onEdit={onEdit}
                 />
               ))}
             </div>

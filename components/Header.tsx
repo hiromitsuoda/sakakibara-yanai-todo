@@ -1,15 +1,20 @@
 'use client'
-import { STAFF_LIST, type Staff } from '@/lib/types'
+import type { Staff } from '@/lib/types'
 
 interface Props {
+  staffList:       Staff[]
   selectedStaffId: string
-  onStaffChange: (id: string) => void
-  onImportClick: () => void
-  onAddClick: () => void
-  onQrClick: () => void
+  onStaffChange:   (id: string) => void
+  onImportClick:   () => void
+  onAddClick:      () => void
+  onQrClick:       () => void
+  onStaffMaster:   () => void   // ⚙ ボタン
 }
 
-export default function Header({ selectedStaffId, onStaffChange, onImportClick, onAddClick, onQrClick }: Props) {
+export default function Header({
+  staffList, selectedStaffId, onStaffChange,
+  onImportClick, onAddClick, onQrClick, onStaffMaster,
+}: Props) {
   return (
     <header className="sticky top-0 z-50 bg-white border-b-2 border-teal-600 shadow-sm">
       <div className="flex items-center gap-3 px-4 h-14">
@@ -27,13 +32,13 @@ export default function Header({ selectedStaffId, onStaffChange, onImportClick, 
         {/* Divider */}
         <div className="hidden md:block w-px h-7 bg-slate-200 mx-1" />
 
-        {/* Staff switcher */}
-        <div className="hidden md:flex bg-slate-100 rounded-lg p-0.5 gap-0.5">
-          {STAFF_LIST.map((s) => (
+        {/* Staff switcher（動的リスト） */}
+        <div className="hidden md:flex bg-slate-100 rounded-lg p-0.5 gap-0.5 flex-wrap">
+          {staffList.map((s) => (
             <button
               key={s.id}
               onClick={() => onStaffChange(s.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition-all ${
                 selectedStaffId === s.id
                   ? 'bg-white text-teal-700 shadow-sm'
                   : 'text-slate-500 hover:text-slate-700'
@@ -56,7 +61,7 @@ export default function Header({ selectedStaffId, onStaffChange, onImportClick, 
           value={selectedStaffId}
           onChange={(e) => onStaffChange(e.target.value)}
         >
-          {STAFF_LIST.map((s) => (
+          {staffList.map((s) => (
             <option key={s.id} value={s.id}>{s.name}</option>
           ))}
         </select>
@@ -83,6 +88,14 @@ export default function Header({ selectedStaffId, onStaffChange, onImportClick, 
           >
             <span>＋</span>
             <span>TODO</span>
+          </button>
+          {/* ⚙ 担当者マスター */}
+          <button
+            onClick={onStaffMaster}
+            title="担当者マスター"
+            className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-sm hover:bg-teal-50 hover:text-teal-600 transition-colors"
+          >
+            ⚙
           </button>
           <button
             onClick={onQrClick}

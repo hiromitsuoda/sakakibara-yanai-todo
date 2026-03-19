@@ -1,6 +1,7 @@
 'use client'
 import { useState, useMemo, useCallback, useEffect } from 'react'
-import type { Todo, Status } from '@/lib/types'
+import type { Todo, Status, Staff } from '@/lib/types'
+import { STATUS_CONFIG, TAG_CONFIG } from '@/lib/types'
 import { useStaff } from '@/lib/useStaff'
 import {
   fetchTodos as fetchTodosFromDB,
@@ -8,52 +9,70 @@ import {
   updateTodo as updateTodoDB,
   deleteTodo as deleteTodoDB,
 } from '@/lib/supabase'
-import Header from '@/components/Header'
-import KanbanBoard from '@/components/KanbanBoard'
-import ImportModal from '@/components/ImportModal'
-import AddTodoModal from '@/components/AddTodoModal'
-import Toast from '@/components/Toast'
-import QrModal from '@/components/QrModal'
-import TimelineView from '@/components/TimelineView'
+import Header         from '@/components/Header'
+import KanbanBoard    from '@/components/KanbanBoard'
+import ImportModal    from '@/components/ImportModal'
+import AddTodoModal   from '@/components/AddTodoModal'
+import EditTodoModal  from '@/components/EditTodoModal'
+import Toast          from '@/components/Toast'
+import QrModal        from '@/components/QrModal'
+import TimelineView   from '@/components/TimelineView'
 import StaffMasterModal from '@/components/StaffMasterModal'
 
 type View = 'kanban' | 'list' | 'timeline'
 
+/** 期限が過ぎた未完了 TODO を overdue に自動変換 */
+function applyOverdue(todos: Todo[]): Todo[] {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return todos.map((t) => {
+    if ((t.status === 'todo' || t.status === 'doing') && t.deadline) {
+      const dl = new Date(t.deadline.replace(/\//g, '-'))
+      if (dl < today) return { ...t, status: 'overdue' as const }
+    }
+    return t
+  })
+}
+
 export default function Home() {
-  const [todos, setTodos] = useState<Todo[]>([])
-  const [loading, setLoading] = useState(true)
+  const [todos,         setTodos]         = useState<Todo[]>([])
+  const [loading,       setLoading]       = useState(true)
   const [selectedStaffId, setSelectedStaffId] = useState('all')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [view, setView] = useState<View>('kanban')
-  const [showImport, setShowImport] = useState(false)
-  const [showQr, setShowQr] = useState(false)
+  const [searchQuery,   setSearchQuery]   = useState('')
+  const [view,          setView]          = useState<View>('kanban')
+  const [showImport,    setShowImport]    = useState(false)
+  const [showQr,        setShowQr]        = useState(false)
   const [showStaffMaster, setShowStaffMaster] = useState(false)
-  const [addStatus, setAddStatus] = useState<Status | null>(null)
+  const [addStatus,     setAddStatus]     = useState<Status | null>(null)
+  const [editingTodo,   setEditingTodo]   = useState<Todo | null>(null)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' | 'info' } | null>(null)
 
-  // ── 担当者マスター ───────────────────────────────────────
+  // ── 担当者マスター ──────────────────────────────────────────
   const { staffList, addStaff, updateStaff, deleteStaff, resolveStaffId } = useStaff()
 
-  // ── Supabase からTODO初期ロード ─────────────────────────
-  useEffect(() => {
-    fetchTodosFromDB()
-      .then((data) => setTodos(data))
-      .catch(() => showToast('データの取得に失敗しました', 'error'))
-      .finally(() => setLoading(false))
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // ── State helpers ──────────────────────────────────────────
+  // ── Toast helper ───────────────────────────────────────────
   const showToast = useCallback((msg: string, type: 'success' | 'error' | 'info' = 'success') => {
     setToast({ msg, type })
   }, [])
 
+  // ── Supabase 初期ロード ────────────────────────────────────
+  useEffect(() => {
+    fetchTodosFromDB()
+      .then((data) => setTodos(applyOverdue(data)))
+      .catch(() => showToast('データの取得に失敗しました', 'error'))
+      .finally(() => setLoading(false))
+  }, [showToast])
+
+  // ── CRUD ──────────────────────────────────────────────────
   const updateTodo = useCallback((id: string, updates: Partial<Todo>) => {
-    // 楽観的 UI 更新
-    setTodos((prev) => prev.map((t) => t.id === id ? { ...t, ...updates, updated_at: new Date().toISOString() } : t))
-    if (updates.status === 'done') showToast('✅ 完了にしました')
-    else if (updates.comment !== undefined) showToast('💬 メモを保存しました')
-    // Supabase に同期
+    setTodos((prev) =>
+      applyOverdue(
+        prev.map((t) => (t.id === id ? { ...t, ...updates, updated_at: new Date().toISOString() } : t)),
+      ),
+    )
+    if (updates.status === 'done')          showToast('✅ 完了にしました')
+    else if (updates.comment !== undefined)  showToast('💬 メモを保存しました')
+    else                                     showToast('更新しました')
     updateTodoDB(id, updates).catch(() => showToast('保存に失敗しました', 'error'))
   }, [showToast])
 
@@ -66,7 +85,7 @@ export default function Home() {
   const addTodo = useCallback(async (todoData: Omit<Todo, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       const newTodo = await createTodoDB(todoData)
-      setTodos((prev) => [newTodo, ...prev])
+      setTodos((prev) => applyOverdue([newTodo, ...prev]))
       showToast('📋 TODOを作成しました')
     } catch {
       showToast('作成に失敗しました', 'error')
@@ -95,16 +114,28 @@ export default function Home() {
         results.push(created)
       } catch { /* スキップ */ }
     }
-    setTodos((prev) => [...results, ...prev])
+    setTodos((prev) => applyOverdue([...results, ...prev]))
     showToast(`📥 ${results.length}件を取込みました`)
   }, [showToast])
+
+  // ── Edit handler ──────────────────────────────────────────
+  const handleEdit = useCallback((id: string) => {
+    setTodos((prev) => {
+      const t = prev.find((x) => x.id === id)
+      if (t) setEditingTodo(t)
+      return prev
+    })
+  }, [])
 
   // ── Filtering ─────────────────────────────────────────────
   const filteredTodos = useMemo(() => {
     return todos.filter((t) => {
-      const matchStaff = selectedStaffId === 'all' || t.staff_id === selectedStaffId
-      const q = searchQuery.toLowerCase()
-      const matchSearch = !q || t.title.toLowerCase().includes(q) || (t.link_no ?? '').includes(q) || (t.detail ?? '').toLowerCase().includes(q)
+      const matchStaff  = selectedStaffId === 'all' || t.staff_id === selectedStaffId
+      const q           = searchQuery.toLowerCase()
+      const matchSearch = !q
+        || t.title.toLowerCase().includes(q)
+        || (t.link_no ?? '').includes(q)
+        || (t.detail ?? '').toLowerCase().includes(q)
       return matchStaff && matchSearch
     })
   }, [todos, selectedStaffId, searchQuery])
@@ -193,22 +224,35 @@ export default function Home() {
             staffList={staffList}
             onUpdate={updateTodo}
             onDelete={deleteTodo}
+            onEdit={handleEdit}
             onAddClick={(s) => setAddStatus(s)}
           />
         ) : view === 'timeline' ? (
-          <TimelineView todos={filteredTodos} onUpdate={updateTodo} onDelete={deleteTodo} />
+          <TimelineView
+            todos={filteredTodos}
+            staffList={staffList}
+            onUpdate={updateTodo}
+            onDelete={deleteTodo}
+            onEdit={handleEdit}
+          />
         ) : (
-          <ListView todos={filteredTodos} staffList={staffList} onUpdate={updateTodo} onDelete={deleteTodo} />
+          <ListView
+            todos={filteredTodos}
+            staffList={staffList}
+            onUpdate={updateTodo}
+            onDelete={deleteTodo}
+            onEdit={handleEdit}
+          />
         )}
       </div>
 
       {/* Mobile bottom nav */}
       <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 h-14 flex z-40">
         {[
-          { icon: '📋', label: 'TODO', action: () => {} },
-          { icon: '📅', label: 'カレンダー', action: () => {} },
-          { icon: '📊', label: 'レポート', action: () => {} },
-          { icon: '⚙️', label: '設定', action: () => {} },
+          { icon: '📋', label: 'カンバン',     action: () => setView('kanban') },
+          { icon: '📅', label: 'タイムライン', action: () => setView('timeline') },
+          { icon: '📊', label: 'リスト',       action: () => setView('list') },
+          { icon: '⚙️', label: '設定',         action: () => setShowStaffMaster(true) },
         ].map(({ icon, label, action }) => (
           <button key={label} onClick={action} className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400">
             <span className="text-lg">{icon}</span>
@@ -243,6 +287,17 @@ export default function Home() {
           onAdd={addTodo}
         />
       )}
+      {editingTodo && (
+        <EditTodoModal
+          todo={editingTodo}
+          staffList={staffList}
+          onClose={() => setEditingTodo(null)}
+          onSave={(id, updates) => {
+            updateTodo(id, updates)
+            setEditingTodo(null)
+          }}
+        />
+      )}
 
       {/* Toast */}
       {toast && (
@@ -253,19 +308,19 @@ export default function Home() {
 }
 
 // ── ListView ──────────────────────────────────────────────────────────────────
-import { STATUS_CONFIG, TAG_CONFIG } from '@/lib/types'
-import type { Staff } from '@/lib/types'
 
 function ListView({
   todos,
   staffList,
   onUpdate,
   onDelete,
+  onEdit,
 }: {
   todos: Todo[]
   staffList: Staff[]
   onUpdate: (id: string, updates: Partial<Todo>) => void
   onDelete: (id: string) => void
+  onEdit:   (id: string) => void
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [commentMap, setCommentMap] = useState<Record<string, string>>({})
@@ -277,7 +332,7 @@ function ListView({
   return (
     <div className="p-4 space-y-6 pb-20">
       {statuses.map((status) => {
-        const cfg = STATUS_CONFIG[status]
+        const cfg   = STATUS_CONFIG[status]
         const group = todos.filter((t) => t.status === status)
         if (group.length === 0) return null
         return (
@@ -289,17 +344,23 @@ function ListView({
             </div>
             <div className="space-y-2">
               {group.map((todo) => {
-                const staff = staffList.find((s) => s.id === todo.staff_id)
+                const staff  = staffList.find((s) => s.id === todo.staff_id)
                 const isOpen = expandedId === todo.id
                 return (
-                  <div key={todo.id} className={`bg-white border rounded-xl overflow-hidden transition-all ${todo.status === 'done' ? 'opacity-60' : ''}`}
-                       style={{ borderColor: isOpen ? cfg.color : '#e2e8f0' }}>
+                  <div
+                    key={todo.id}
+                    className={`bg-white border rounded-xl overflow-hidden transition-all ${todo.status === 'done' ? 'opacity-60' : ''}`}
+                    style={{ borderColor: isOpen ? cfg.color : '#e2e8f0' }}
+                  >
                     <div
                       className="flex items-center gap-3 px-4 py-3 cursor-pointer"
                       onClick={() => setExpandedId(isOpen ? null : todo.id)}
                     >
                       <button
-                        onClick={(e) => { e.stopPropagation(); onUpdate(todo.id, { status: todo.status === 'done' ? 'doing' : 'done' }) }}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onUpdate(todo.id, { status: todo.status === 'done' ? 'doing' : 'done' })
+                        }}
                         className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
                           todo.status === 'done' ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300 hover:border-green-400'
                         }`}
@@ -307,17 +368,36 @@ function ListView({
                         {todo.status === 'done' && <span className="text-[10px]">✓</span>}
                       </button>
                       <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-semibold truncate ${todo.status === 'done' ? 'line-through text-slate-400' : ''}`}>{todo.title}</p>
+                        <p className={`text-sm font-semibold truncate ${todo.status === 'done' ? 'line-through text-slate-400' : ''}`}>
+                          {todo.link_no && (
+                            <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded mr-1.5">#{todo.link_no}</span>
+                          )}
+                          {todo.title}
+                        </p>
                         <div className="flex items-center gap-2 mt-0.5">
                           {todo.tags.map((tag) => (
-                            <span key={tag} className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: TAG_CONFIG[tag].bg, color: TAG_CONFIG[tag].text }}>{tag}</span>
+                            <span
+                              key={tag}
+                              className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                              style={{ background: TAG_CONFIG[tag].bg, color: TAG_CONFIG[tag].text }}
+                            >
+                              {tag}
+                            </span>
                           ))}
-                          {todo.deadline && <span className={`text-[11px] ${todo.status === 'overdue' ? 'text-red-600 font-bold' : 'text-slate-400'}`}>📅 {todo.deadline}</span>}
+                          {todo.deadline && (
+                            <span className={`text-[11px] ${todo.status === 'overdue' ? 'text-red-600 font-bold' : 'text-slate-400'}`}>
+                              📅 {todo.deadline}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         {staff && (
-                          <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ background: staff.color }}>
+                          <div
+                            className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                            style={{ background: staff.color }}
+                            title={staff.name}
+                          >
                             {staff.initial}
                           </div>
                         )}
@@ -327,6 +407,11 @@ function ListView({
                     {isOpen && (
                       <div className="card-details border-t border-slate-100 bg-slate-50 px-4 py-3 space-y-3">
                         {todo.detail && <p className="text-xs text-slate-600 leading-relaxed">{todo.detail}</p>}
+                        {todo.task && (
+                          <p className="text-xs text-slate-500 bg-white rounded-lg px-3 py-2 border border-slate-200">
+                            📝 {todo.task}
+                          </p>
+                        )}
                         {todo.attachments.length > 0 && (
                           <div className="flex flex-wrap gap-1.5">
                             {todo.attachments.map((a) => (
@@ -342,10 +427,31 @@ function ListView({
                           className="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 focus:border-teal-500 focus:outline-none resize-none bg-white"
                         />
                         <div className="flex justify-end gap-2">
-                          <button onClick={() => onDelete(todo.id)} className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-red-500">削除</button>
-                          <button onClick={() => onUpdate(todo.id, { comment: getComment(todo) })} className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100">保存</button>
+                          <button
+                            onClick={() => onDelete(todo.id)}
+                            className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-red-500"
+                          >
+                            削除
+                          </button>
+                          <button
+                            onClick={() => onEdit(todo.id)}
+                            className="text-xs px-3 py-1.5 rounded-lg border border-blue-200 text-blue-500 hover:bg-blue-50"
+                          >
+                            ✏ 編集
+                          </button>
+                          <button
+                            onClick={() => onUpdate(todo.id, { comment: getComment(todo) })}
+                            className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100"
+                          >
+                            保存
+                          </button>
                           {todo.status !== 'done' && (
-                            <button onClick={() => onUpdate(todo.id, { status: 'done' })} className="text-xs px-3 py-1.5 rounded-lg bg-green-500 text-white hover:bg-green-600">✓ 完了</button>
+                            <button
+                              onClick={() => onUpdate(todo.id, { status: 'done' })}
+                              className="text-xs px-3 py-1.5 rounded-lg bg-green-500 text-white hover:bg-green-600"
+                            >
+                              ✓ 完了
+                            </button>
                           )}
                         </div>
                       </div>
@@ -357,6 +463,9 @@ function ListView({
           </div>
         )
       })}
+      {todos.length === 0 && (
+        <div className="text-center py-20 text-slate-400 text-sm">該当するTODOはありません</div>
+      )}
     </div>
   )
 }

@@ -4,10 +4,10 @@ import type { Todo, Status, Priority, TagType, Staff } from '@/lib/types'
 import { TAG_CONFIG } from '@/lib/types'
 
 interface Props {
-  defaultStatus?: Status
+  todo: Todo
   staffList: Staff[]
   onClose: () => void
-  onAdd: (todo: Omit<Todo, 'id' | 'created_at' | 'updated_at'>) => void
+  onSave: (id: string, updates: Partial<Todo>) => void
 }
 
 const PRIORITY_OPTIONS: Priority[] = ['高', '中', '低']
@@ -19,16 +19,18 @@ const STATUS_OPTIONS: { value: Status; label: string; icon: string }[] = [
 ]
 const ALL_TAGS: TagType[] = ['許可申請', '変更届', '相談対応', '法人', '更新', 'その他']
 
-export default function AddTodoModal({ defaultStatus = 'todo', staffList, onClose, onAdd }: Props) {
-  const [linkNo,   setLinkNo]   = useState('')
-  const [title,    setTitle]    = useState('')
-  const [detail,   setDetail]   = useState('')
-  const [task,     setTask]     = useState('')
-  const [deadline, setDeadline] = useState('')
-  const [staffId,  setStaffId]  = useState(staffList.filter((s) => s.id !== 'all')[0]?.id ?? '')
-  const [priority, setPriority] = useState<Priority>('中')
-  const [status,   setStatus]   = useState<Status>(defaultStatus)
-  const [tags,     setTags]     = useState<TagType[]>([])
+export default function EditTodoModal({ todo, staffList, onClose, onSave }: Props) {
+  const [linkNo,   setLinkNo]   = useState(todo.link_no ?? '')
+  const [title,    setTitle]    = useState(todo.title)
+  const [detail,   setDetail]   = useState(todo.detail ?? '')
+  const [task,     setTask]     = useState(todo.task ?? '')
+  const [deadline, setDeadline] = useState(
+    todo.deadline ? todo.deadline.replace(/\//g, '-') : '',
+  )
+  const [staffId,  setStaffId]  = useState(todo.staff_id)
+  const [priority, setPriority] = useState<Priority>(todo.priority)
+  const [status,   setStatus]   = useState<Status>(todo.status)
+  const [tags,     setTags]     = useState<TagType[]>(todo.tags ?? [])
   const [errors,   setErrors]   = useState<string[]>([])
 
   const toggleTag = (tag: TagType) => {
@@ -37,24 +39,21 @@ export default function AddTodoModal({ defaultStatus = 'todo', staffList, onClos
     )
   }
 
-  const handleSubmit = () => {
+  const handleSave = () => {
     const errs: string[] = []
     if (!title.trim()) errs.push('案件タイトルは必須です')
-    if (!deadline)     errs.push('期限日は必須です')
     if (errs.length > 0) { setErrors(errs); return }
 
-    onAdd({
-      link_no:     linkNo.trim() || undefined,
-      title:       title.trim(),
-      detail:      detail.trim() || undefined,
-      task:        task.trim() || undefined,
-      staff_id:    staffId,
-      status,
+    onSave(todo.id, {
+      link_no:  linkNo.trim() || undefined,
+      title:    title.trim(),
+      detail:   detail.trim() || undefined,
+      task:     task.trim() || undefined,
+      deadline: deadline ? deadline.replace(/-/g, '/') : undefined,
+      staff_id: staffId,
       priority,
+      status,
       tags,
-      deadline:    deadline.replace(/-/g, '/'),
-      comment:     '',
-      attachments: [],
     })
     onClose()
   }
@@ -66,10 +65,10 @@ export default function AddTodoModal({ defaultStatus = 'todo', staffList, onClos
       <div className="modal-content bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 sticky top-0 bg-white rounded-t-2xl">
-          <div className="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center text-teal-700">＋</div>
+          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-700">✏</div>
           <div>
-            <h2 className="text-sm font-bold text-slate-800">新規TODO作成</h2>
-            <p className="text-xs text-slate-500">案件情報を入力してください</p>
+            <h2 className="text-sm font-bold text-slate-800">TODO編集</h2>
+            <p className="text-xs text-slate-500 truncate max-w-xs">{todo.title}</p>
           </div>
           <button onClick={onClose} className="ml-auto text-slate-400 hover:text-slate-600 text-lg">✕</button>
         </div>
@@ -101,7 +100,6 @@ export default function AddTodoModal({ defaultStatus = 'todo', staffList, onClos
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="例: 【建設業許可】営業所変更届出"
               className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:border-teal-500 focus:outline-none"
             />
           </div>
@@ -112,7 +110,6 @@ export default function AddTodoModal({ defaultStatus = 'todo', staffList, onClos
             <textarea
               value={detail}
               onChange={(e) => setDetail(e.target.value)}
-              placeholder="作業内容の詳細..."
               rows={3}
               className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:border-teal-500 focus:outline-none resize-none"
             />
@@ -125,14 +122,13 @@ export default function AddTodoModal({ defaultStatus = 'todo', staffList, onClos
               type="text"
               value={task}
               onChange={(e) => setTask(e.target.value)}
-              placeholder="例: 出来たら連絡・変更届に係る"
               className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:border-teal-500 focus:outline-none"
             />
           </div>
 
           {/* Deadline */}
           <div>
-            <label className="text-xs font-bold text-slate-500 block mb-1.5">期限日 <span className="text-red-500">*</span></label>
+            <label className="text-xs font-bold text-slate-500 block mb-1.5">期限日</label>
             <input
               type="date"
               value={deadline}
@@ -201,7 +197,7 @@ export default function AddTodoModal({ defaultStatus = 'todo', staffList, onClos
 
           {/* Tags */}
           <div>
-            <label className="text-xs font-bold text-slate-500 block mb-1.5">タグ（任意）</label>
+            <label className="text-xs font-bold text-slate-500 block mb-1.5">タグ</label>
             <div className="flex flex-wrap gap-2">
               {ALL_TAGS.map((tag) => {
                 const cfg = TAG_CONFIG[tag]
@@ -211,11 +207,13 @@ export default function AddTodoModal({ defaultStatus = 'todo', staffList, onClos
                     key={tag}
                     onClick={() => toggleTag(tag)}
                     className={`text-xs font-bold px-3 py-1.5 rounded-full border transition-all ${
-                      active ? 'ring-2 ring-offset-1 ring-teal-500' : 'opacity-50 hover:opacity-80'
+                      active
+                        ? 'ring-2 ring-offset-1 ring-teal-500'
+                        : 'opacity-50 hover:opacity-80'
                     }`}
                     style={{
-                      background:  active ? cfg.bg : '#f1f5f9',
-                      color:       active ? cfg.text : '#64748b',
+                      background: active ? cfg.bg : '#f1f5f9',
+                      color:      active ? cfg.text : '#64748b',
                       borderColor: active ? cfg.text : 'transparent',
                     }}
                   >
@@ -235,10 +233,10 @@ export default function AddTodoModal({ defaultStatus = 'todo', staffList, onClos
               キャンセル
             </button>
             <button
-              onClick={handleSubmit}
-              className="flex-1 py-2.5 text-xs font-bold bg-teal-600 text-white rounded-xl hover:bg-teal-700 transition-all"
+              onClick={handleSave}
+              className="flex-1 py-2.5 text-xs font-bold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all"
             >
-              ＋ 作成する
+              変更を保存
             </button>
           </div>
         </div>

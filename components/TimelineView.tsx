@@ -1,12 +1,14 @@
 'use client'
 import { useState } from 'react'
-import type { Todo } from '@/lib/types'
-import { STAFF_LIST, STATUS_CONFIG } from '@/lib/types'
+import type { Todo, Staff } from '@/lib/types'
+import { STATUS_CONFIG } from '@/lib/types'
 
 interface Props {
   todos: Todo[]
+  staffList: Staff[]
   onUpdate: (id: string, updates: Partial<Todo>) => void
   onDelete: (id: string) => void
+  onEdit:   (id: string) => void
 }
 
 const TODAY = new Date()
@@ -32,21 +34,20 @@ function getDayLabel(date: Date | null): string {
 
 const GROUP_ORDER = ['期限超過', '今日', '明日', '今週', '来週', 'それ以降', '期限未設定', '完了']
 const GROUP_STYLE: Record<string, { color: string; bg: string; dot: string }> = {
-  '期限超過':  { color: 'text-red-700',    bg: 'bg-red-50',    dot: 'bg-red-500' },
-  '今日':      { color: 'text-orange-700', bg: 'bg-orange-50', dot: 'bg-orange-500' },
-  '明日':      { color: 'text-amber-700',  bg: 'bg-amber-50',  dot: 'bg-amber-400' },
-  '今週':      { color: 'text-teal-700',   bg: 'bg-teal-50',   dot: 'bg-teal-500' },
-  '来週':      { color: 'text-blue-700',   bg: 'bg-blue-50',   dot: 'bg-blue-400' },
-  'それ以降':  { color: 'text-slate-600',  bg: 'bg-slate-50',  dot: 'bg-slate-400' },
-  '期限未設定':{ color: 'text-slate-500',  bg: 'bg-slate-50',  dot: 'bg-slate-300' },
-  '完了':      { color: 'text-green-700',  bg: 'bg-green-50',  dot: 'bg-green-500' },
+  '期限超過':   { color: 'text-red-700',    bg: 'bg-red-50',    dot: 'bg-red-500' },
+  '今日':       { color: 'text-orange-700', bg: 'bg-orange-50', dot: 'bg-orange-500' },
+  '明日':       { color: 'text-amber-700',  bg: 'bg-amber-50',  dot: 'bg-amber-400' },
+  '今週':       { color: 'text-teal-700',   bg: 'bg-teal-50',   dot: 'bg-teal-500' },
+  '来週':       { color: 'text-blue-700',   bg: 'bg-blue-50',   dot: 'bg-blue-400' },
+  'それ以降':   { color: 'text-slate-600',  bg: 'bg-slate-50',  dot: 'bg-slate-400' },
+  '期限未設定': { color: 'text-slate-500',  bg: 'bg-slate-50',  dot: 'bg-slate-300' },
+  '完了':       { color: 'text-green-700',  bg: 'bg-green-50',  dot: 'bg-green-500' },
 }
 
-export default function TimelineView({ todos, onUpdate, onDelete }: Props) {
+export default function TimelineView({ todos, staffList, onUpdate, onDelete, onEdit }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [commentMap, setCommentMap] = useState<Record<string, string>>({})
 
-  // Sort todos: done goes to 完了 group, others by deadline
   const sorted = [...todos].sort((a, b) => {
     if (a.status === 'done' && b.status !== 'done') return 1
     if (b.status === 'done' && a.status !== 'done') return -1
@@ -58,7 +59,6 @@ export default function TimelineView({ todos, onUpdate, onDelete }: Props) {
     return da.getTime() - db.getTime()
   })
 
-  // Group
   const groups: Record<string, Todo[]> = {}
   for (const t of sorted) {
     const key = t.status === 'done' ? '完了' : getDayLabel(parseDeadline(t.deadline))
@@ -85,15 +85,13 @@ export default function TimelineView({ todos, onUpdate, onDelete }: Props) {
 
             {/* Timeline items */}
             <div className="relative ml-1.5">
-              {/* vertical line */}
               <div className="absolute left-0 top-0 bottom-0 w-px bg-slate-200" />
-
               <div className="space-y-2 ml-5">
                 {items.map((todo) => {
-                  const staff = STAFF_LIST.find((s) => s.id === todo.staff_id)
+                  const staff     = staffList.find((s) => s.id === todo.staff_id)
                   const statusCfg = STATUS_CONFIG[todo.status]
-                  const isOpen = expandedId === todo.id
-                  const comment = commentMap[todo.id] ?? todo.comment ?? ''
+                  const isOpen    = expandedId === todo.id
+                  const comment   = commentMap[todo.id] ?? todo.comment ?? ''
 
                   return (
                     <div key={todo.id} className="relative">
@@ -103,11 +101,9 @@ export default function TimelineView({ todos, onUpdate, onDelete }: Props) {
                         style={{ background: todo.status === 'done' ? '#22c55e' : statusCfg.color }}
                       />
 
-                      <div
-                        className={`bg-white border rounded-xl overflow-hidden transition-all ${
-                          todo.status === 'done' ? 'opacity-60' : ''
-                        } ${isOpen ? 'border-teal-300 shadow-md' : 'border-slate-200 hover:border-teal-200'}`}
-                      >
+                      <div className={`bg-white border rounded-xl overflow-hidden transition-all ${
+                        todo.status === 'done' ? 'opacity-60' : ''
+                      } ${isOpen ? 'border-teal-300 shadow-md' : 'border-slate-200 hover:border-teal-200'}`}>
                         {/* Status bar */}
                         <div className="h-0.5 w-full" style={{ background: statusCfg.color }} />
 
@@ -132,7 +128,6 @@ export default function TimelineView({ todos, onUpdate, onDelete }: Props) {
                           </button>
 
                           <div className="flex-1 min-w-0">
-                            {/* Title row */}
                             <p className={`text-sm font-semibold leading-snug ${
                               todo.status === 'done' ? 'line-through text-slate-400' : 'text-slate-800'
                             }`}>
@@ -143,13 +138,11 @@ export default function TimelineView({ todos, onUpdate, onDelete }: Props) {
                               )}
                               {todo.title}
                             </p>
-
-                            {/* Meta row */}
                             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                               {todo.deadline && (
                                 <span className={`text-[11px] font-medium ${
                                   todo.status === 'overdue' ? 'text-red-600' :
-                                  todo.status === 'done' ? 'text-green-600' : 'text-slate-500'
+                                  todo.status === 'done'    ? 'text-green-600' : 'text-slate-500'
                                 }`}>
                                   📅 {todo.deadline}
                                 </span>
@@ -170,7 +163,7 @@ export default function TimelineView({ todos, onUpdate, onDelete }: Props) {
                                 todo.priority === '中' ? 'bg-amber-50 text-amber-600' :
                                 'bg-green-50 text-green-600'
                               }`}>{todo.priority}</span>
-                              {todo.attachments.some(a => a.name.includes('見積')) && (
+                              {todo.attachments.some((a) => a.name.includes('見積')) && (
                                 <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-bold">📄 見積書</span>
                               )}
                               {todo.comment && <span className="text-slate-400 text-[11px]">💬</span>}
@@ -211,10 +204,31 @@ export default function TimelineView({ todos, onUpdate, onDelete }: Props) {
                               className="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 focus:border-teal-500 focus:outline-none resize-none bg-white"
                             />
                             <div className="flex justify-end gap-2">
-                              <button onClick={() => onDelete(todo.id)} className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-red-500">削除</button>
-                              <button onClick={() => onUpdate(todo.id, { comment })} className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100">保存</button>
+                              <button
+                                onClick={() => onDelete(todo.id)}
+                                className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-red-500"
+                              >
+                                削除
+                              </button>
+                              <button
+                                onClick={() => onEdit(todo.id)}
+                                className="text-xs px-3 py-1.5 rounded-lg border border-blue-200 text-blue-500 hover:bg-blue-50"
+                              >
+                                ✏ 編集
+                              </button>
+                              <button
+                                onClick={() => onUpdate(todo.id, { comment })}
+                                className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100"
+                              >
+                                保存
+                              </button>
                               {todo.status !== 'done' && (
-                                <button onClick={() => onUpdate(todo.id, { status: 'done' })} className="text-xs px-3 py-1.5 rounded-lg bg-green-500 text-white hover:bg-green-600">✓ 完了</button>
+                                <button
+                                  onClick={() => onUpdate(todo.id, { status: 'done' })}
+                                  className="text-xs px-3 py-1.5 rounded-lg bg-green-500 text-white hover:bg-green-600"
+                                >
+                                  ✓ 完了
+                                </button>
                               )}
                             </div>
                           </div>
