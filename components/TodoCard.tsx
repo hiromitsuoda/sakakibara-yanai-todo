@@ -102,8 +102,9 @@ export default function TodoCard({ todo, onUpdate, onDelete }: Props) {
               {todo.deadline}
             </span>
           )}
+          <EstimateButton attachments={todo.attachments} />
           {todo.attachments.length > 0 && (
-            <span className="text-slate-400 ml-auto">📎 {todo.attachments.length}</span>
+            <span className="text-slate-400">📎 {todo.attachments.length}</span>
           )}
           {todo.comment && (
             <span className="text-slate-400">💬</span>
@@ -226,6 +227,31 @@ export default function TodoCard({ todo, onUpdate, onDelete }: Props) {
         </div>
       )}
     </div>
+  )
+}
+
+function EstimateButton({ attachments }: { attachments: Todo['attachments'] }) {
+  const estFile = attachments.find((a) => a.name.includes('見積'))
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (estFile?.url) {
+      window.open(estFile.url, '_blank')
+    } else {
+      alert('見積書ファイルが添付されていません。\n今後、ファイルをアップロードすると表示できます。')
+    }
+  }
+  return (
+    <button
+      onClick={handleClick}
+      title={estFile ? `見積書: ${estFile.name}` : '見積書なし'}
+      className={`ml-auto flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all ${
+        estFile
+          ? 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100'
+          : 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100'
+      }`}
+    >
+      📄 見積書
+    </button>
   )
 }
 
