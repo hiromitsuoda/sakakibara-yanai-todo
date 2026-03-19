@@ -1,8 +1,13 @@
 'use client'
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import type { Todo, Status } from '@/lib/types'
-import { MOCK_TODOS } from '@/data/mockData'
 import { useStaff } from '@/lib/useStaff'
+import {
+  fetchTodos as fetchTodosFromDB,
+  createTodo as createTodoDB,
+  updateTodo as updateTodoDB,
+  deleteTodo as deleteTodoDB,
+} from '@/lib/supabase'
 import Header from '@/components/Header'
 import KanbanBoard from '@/components/KanbanBoard'
 import ImportModal from '@/components/ImportModal'
@@ -15,7 +20,8 @@ import StaffMasterModal from '@/components/StaffMasterModal'
 type View = 'kanban' | 'list' | 'timeline'
 
 export default function Home() {
-  const [todos, setTodos] = useState<Todo[]>(MOCK_TODOS)
+  const [todos, setTodos] = useState<Todo[]>([])
+  const [loading, setLoading] = useState(true)
   const [selectedStaffId, setSelectedStaffId] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [view, setView] = useState<View>('kanban')
@@ -28,44 +34,69 @@ export default function Home() {
   // ── 担当者マスター ───────────────────────────────────────
   const { staffList, addStaff, updateStaff, deleteStaff, resolveStaffId } = useStaff()
 
+  // ── Supabase からTODO初期ロード ─────────────────────────
+  useEffect(() => {
+    fetchTodosFromDB()
+      .then((data) => setTodos(data))
+      .catch(() => showToast('データの取得に失敗しました', 'error'))
+      .finally(() => setLoading(false))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // ── State helpers ──────────────────────────────────────────
   const showToast = useCallback((msg: string, type: 'success' | 'error' | 'info' = 'success') => {
     setToast({ msg, type })
   }, [])
 
   const updateTodo = useCallback((id: string, updates: Partial<Todo>) => {
+    // 楽観的 UI 更新
     setTodos((prev) => prev.map((t) => t.id === id ? { ...t, ...updates, updated_at: new Date().toISOString() } : t))
     if (updates.status === 'done') showToast('✅ 完了にしました')
     else if (updates.comment !== undefined) showToast('💬 メモを保存しました')
+    // Supabase に同期
+    updateTodoDB(id, updates).catch(() => showToast('保存に失敗しました', 'error'))
   }, [showToast])
 
   const deleteTodo = useCallback((id: string) => {
     setTodos((prev) => prev.filter((t) => t.id !== id))
     showToast('削除しました', 'info')
+    deleteTodoDB(id).catch(() => showToast('削除に失敗しました', 'error'))
   }, [showToast])
 
-  const addTodo = useCallback((todoData: Omit<Todo, 'id' | 'created_at' | 'updated_at'>) => {
-    const newTodo: Todo = {
-      ...todoData,
-      id: crypto.randomUUID(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+  const addTodo = useCallback(async (todoData: Omit<Todo, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const newTodo = await createTodoDB(todoData)
+      setTodos((prev) => [newTodo, ...prev])
+      showToast('📋 TODOを作成しました')
+    } catch {
+      showToast('作成に失敗しました', 'error')
     }
-    setTodos((prev) => [newTodo, ...prev])
-    showToast('📋 TODOを作成しました')
   }, [showToast])
 
-  const importTodos = useCallback((newTodos: Partial<Todo>[]) => {
-    const full = newTodos.map((t) => ({
-      ...t,
-      id: t.id ?? crypto.randomUUID(),
-      comment: '',
-      attachments: [],
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })) as Todo[]
-    setTodos((prev) => [...full, ...prev])
-    showToast(`📥 ${full.length}件を取込みました`)
+  const importTodos = useCallback(async (newTodos: Partial<Todo>[]) => {
+    const results: Todo[] = []
+    for (const t of newTodos) {
+      try {
+        const created = await createTodoDB({
+          link_no:     t.link_no,
+          title:       t.title ?? '',
+          detail:      t.detail,
+          task:        t.task,
+          staff_id:    t.staff_id ?? 'unknown',
+          status:      t.status ?? 'todo',
+          priority:    t.priority ?? '中',
+          tags:        t.tags ?? [],
+          deadline:    t.deadline,
+          start_time:  t.start_time,
+          end_time:    t.end_time,
+          comment:     '',
+          attachments: [],
+        })
+        results.push(created)
+      } catch { /* スキップ */ }
+    }
+    setTodos((prev) => [...results, ...prev])
+    showToast(`📥 ${results.length}件を取込みました`)
   }, [showToast])
 
   // ── Filtering ─────────────────────────────────────────────
@@ -151,7 +182,12 @@ export default function Home() {
 
       {/* Board / Timeline / List */}
       <div className="flex-1 overflow-auto">
-        {view === 'kanban' ? (
+        {loading ? (
+          <div className="flex items-center justify-center h-full gap-3 text-slate-400">
+            <span className="animate-spin text-2xl">⏳</span>
+            <span className="text-sm font-medium">データを読み込んでいます...</span>
+          </div>
+        ) : view === 'kanban' ? (
           <KanbanBoard
             todos={filteredTodos}
             staffList={staffList}
