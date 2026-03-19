@@ -1,10 +1,11 @@
 'use client'
 import { useState } from 'react'
-import type { Todo, Status } from '@/lib/types'
-import { STAFF_LIST, STATUS_CONFIG, TAG_CONFIG } from '@/lib/types'
+import type { Todo, Status, Staff } from '@/lib/types'
+import { STATUS_CONFIG, TAG_CONFIG } from '@/lib/types'
 
 interface Props {
   todo: Todo
+  staffList: Staff[]
   onUpdate: (id: string, updates: Partial<Todo>) => void
   onDelete: (id: string) => void
 }
@@ -16,12 +17,12 @@ const STATUS_NEXT: Record<Status, { label: string; next: Status } | null> = {
   done:    null,
 }
 
-export default function TodoCard({ todo, onUpdate, onDelete }: Props) {
+export default function TodoCard({ todo, staffList, onUpdate, onDelete }: Props) {
   const [open, setOpen] = useState(false)
   const [comment, setComment] = useState(todo.comment ?? '')
   const [saving, setSaving] = useState(false)
 
-  const staff = STAFF_LIST.find((s) => s.id === todo.staff_id)
+  const staff = staffList.find((s) => s.id === todo.staff_id)
   const isDone = todo.status === 'done'
   const isOverdue = todo.status === 'overdue'
   const nextAction = STATUS_NEXT[todo.status]

@@ -1,10 +1,11 @@
 'use client'
-import type { Todo, Status } from '@/lib/types'
+import type { Todo, Status, Staff } from '@/lib/types'
 import { STATUS_CONFIG } from '@/lib/types'
 import TodoCard from './TodoCard'
 
 interface Props {
   todos: Todo[]
+  staffList: Staff[]
   onUpdate: (id: string, updates: Partial<Todo>) => void
   onDelete: (id: string) => void
   onAddClick: (status: Status) => void
@@ -12,7 +13,7 @@ interface Props {
 
 const COLUMNS: Status[] = ['overdue', 'todo', 'doing', 'done']
 
-export default function KanbanBoard({ todos, onUpdate, onDelete, onAddClick }: Props) {
+export default function KanbanBoard({ todos, staffList, onUpdate, onDelete, onAddClick }: Props) {
   return (
     <div className="board-scroll flex gap-4 p-4 h-full min-h-0">
       {COLUMNS.map((status) => {
@@ -53,6 +54,7 @@ export default function KanbanBoard({ todos, onUpdate, onDelete, onAddClick }: P
                 <TodoCard
                   key={todo.id}
                   todo={todo}
+                  staffList={staffList}
                   onUpdate={onUpdate}
                   onDelete={onDelete}
                 />

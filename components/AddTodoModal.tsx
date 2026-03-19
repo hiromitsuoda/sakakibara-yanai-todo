@@ -1,10 +1,10 @@
 'use client'
 import { useState } from 'react'
-import type { Todo, Status, Priority } from '@/lib/types'
-import { STAFF_LIST } from '@/lib/types'
+import type { Todo, Status, Priority, Staff } from '@/lib/types'
 
 interface Props {
   defaultStatus?: Status
+  staffList: Staff[]
   onClose: () => void
   onAdd: (todo: Omit<Todo, 'id' | 'created_at' | 'updated_at'>) => void
 }
@@ -17,13 +17,13 @@ const STATUS_OPTIONS: { value: Status; label: string; icon: string }[] = [
   { value: 'overdue', label: '期限超過', icon: '⚠️' },
 ]
 
-export default function AddTodoModal({ defaultStatus = 'todo', onClose, onAdd }: Props) {
+export default function AddTodoModal({ defaultStatus = 'todo', staffList, onClose, onAdd }: Props) {
   const [linkNo, setLinkNo] = useState('')
   const [title, setTitle] = useState('')
   const [detail, setDetail] = useState('')
   const [task, setTask] = useState('')
   const [deadline, setDeadline] = useState('')
-  const [staffId, setStaffId] = useState(STAFF_LIST.filter((s) => s.id !== 'all')[0]?.id ?? '')
+  const [staffId, setStaffId] = useState(staffList.filter((s) => s.id !== 'all')[0]?.id ?? '')
   const [priority, setPriority] = useState<Priority>('中')
   const [status, setStatus] = useState<Status>(defaultStatus)
   const [errors, setErrors] = useState<string[]>([])
@@ -139,7 +139,7 @@ export default function AddTodoModal({ defaultStatus = 'todo', onClose, onAdd }:
                 onChange={(e) => setStaffId(e.target.value)}
                 className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:border-teal-500 focus:outline-none bg-white"
               >
-                {STAFF_LIST.filter((s) => s.id !== 'all').map((s) => (
+                {staffList.filter((s) => s.id !== 'all').map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>

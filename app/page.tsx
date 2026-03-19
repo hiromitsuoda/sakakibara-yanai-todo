@@ -2,6 +2,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import type { Todo, Status } from '@/lib/types'
 import { MOCK_TODOS } from '@/data/mockData'
+import { useStaff } from '@/lib/useStaff'
 import Header from '@/components/Header'
 import KanbanBoard from '@/components/KanbanBoard'
 import ImportModal from '@/components/ImportModal'
@@ -9,6 +10,7 @@ import AddTodoModal from '@/components/AddTodoModal'
 import Toast from '@/components/Toast'
 import QrModal from '@/components/QrModal'
 import TimelineView from '@/components/TimelineView'
+import StaffMasterModal from '@/components/StaffMasterModal'
 
 type View = 'kanban' | 'list' | 'timeline'
 
@@ -19,8 +21,12 @@ export default function Home() {
   const [view, setView] = useState<View>('kanban')
   const [showImport, setShowImport] = useState(false)
   const [showQr, setShowQr] = useState(false)
+  const [showStaffMaster, setShowStaffMaster] = useState(false)
   const [addStatus, setAddStatus] = useState<Status | null>(null)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' | 'info' } | null>(null)
+
+  // ── 担当者マスター ───────────────────────────────────────
+  const { staffList, addStaff, updateStaff, deleteStaff, resolveStaffId } = useStaff()
 
   // ── State helpers ──────────────────────────────────────────
   const showToast = useCallback((msg: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -84,11 +90,13 @@ export default function Home() {
     <div className="flex flex-col h-screen overflow-hidden">
       {/* Header */}
       <Header
+        staffList={staffList}
         selectedStaffId={selectedStaffId}
         onStaffChange={setSelectedStaffId}
         onImportClick={() => setShowImport(true)}
         onAddClick={() => setAddStatus('todo')}
         onQrClick={() => setShowQr(true)}
+        onStaffMaster={() => setShowStaffMaster(true)}
       />
 
       {/* Sub header */}
@@ -146,6 +154,7 @@ export default function Home() {
         {view === 'kanban' ? (
           <KanbanBoard
             todos={filteredTodos}
+            staffList={staffList}
             onUpdate={updateTodo}
             onDelete={deleteTodo}
             onAddClick={(s) => setAddStatus(s)}
@@ -153,7 +162,7 @@ export default function Home() {
         ) : view === 'timeline' ? (
           <TimelineView todos={filteredTodos} onUpdate={updateTodo} onDelete={deleteTodo} />
         ) : (
-          <ListView todos={filteredTodos} onUpdate={updateTodo} onDelete={deleteTodo} />
+          <ListView todos={filteredTodos} staffList={staffList} onUpdate={updateTodo} onDelete={deleteTodo} />
         )}
       </div>
 
@@ -175,11 +184,25 @@ export default function Home() {
       {/* Modals */}
       {showQr && <QrModal onClose={() => setShowQr(false)} />}
       {showImport && (
-        <ImportModal onClose={() => setShowImport(false)} onImport={importTodos} />
+        <ImportModal
+          onClose={() => setShowImport(false)}
+          onImport={importTodos}
+          resolveStaffId={resolveStaffId}
+        />
+      )}
+      {showStaffMaster && (
+        <StaffMasterModal
+          staffList={staffList}
+          onAdd={addStaff}
+          onUpdate={updateStaff}
+          onDelete={deleteStaff}
+          onClose={() => setShowStaffMaster(false)}
+        />
       )}
       {addStatus && (
         <AddTodoModal
           defaultStatus={addStatus}
+          staffList={staffList}
           onClose={() => setAddStatus(null)}
           onAdd={addTodo}
         />
@@ -194,14 +217,17 @@ export default function Home() {
 }
 
 // ── ListView ──────────────────────────────────────────────────────────────────
-import { STAFF_LIST, STATUS_CONFIG, TAG_CONFIG } from '@/lib/types'
+import { STATUS_CONFIG, TAG_CONFIG } from '@/lib/types'
+import type { Staff } from '@/lib/types'
 
 function ListView({
   todos,
+  staffList,
   onUpdate,
   onDelete,
 }: {
   todos: Todo[]
+  staffList: Staff[]
   onUpdate: (id: string, updates: Partial<Todo>) => void
   onDelete: (id: string) => void
 }) {
@@ -227,7 +253,7 @@ function ListView({
             </div>
             <div className="space-y-2">
               {group.map((todo) => {
-                const staff = STAFF_LIST.find((s) => s.id === todo.staff_id)
+                const staff = staffList.find((s) => s.id === todo.staff_id)
                 const isOpen = expandedId === todo.id
                 return (
                   <div key={todo.id} className={`bg-white border rounded-xl overflow-hidden transition-all ${todo.status === 'done' ? 'opacity-60' : ''}`}
