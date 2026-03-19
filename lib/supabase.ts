@@ -51,6 +51,11 @@ export async function deleteTodo(id: string): Promise<void> {
   if (error) throw error
 }
 
+export async function deleteAllTodos(): Promise<void> {
+  const { error } = await supabase.from('todos').delete().neq('id', '')
+  if (error) throw error
+}
+
 // ── STAFF CRUD ───────────────────────────────────────────────
 
 export async function fetchStaff(): Promise<Staff[]> {

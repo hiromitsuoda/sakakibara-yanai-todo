@@ -8,6 +8,7 @@ import {
   createTodo as createTodoDB,
   updateTodo as updateTodoDB,
   deleteTodo as deleteTodoDB,
+  deleteAllTodos as deleteAllTodosFromDB,
 } from '@/lib/supabase'
 import Header         from '@/components/Header'
 import KanbanBoard    from '@/components/KanbanBoard'
@@ -179,6 +180,14 @@ export default function Home() {
     }
   }, [persist, showToast])
 
+  // ── 全件削除（テスト用） ────────────────────────────────────
+  const deleteAllTodos = useCallback(async () => {
+    if (!confirm(`全 ${todos.length} 件のTODOを削除します。\nこの操作は元に戻せません。よろしいですか？`)) return
+    persist(() => [])
+    showToast('全件削除しました', 'info')
+    deleteAllTodosFromDB().catch(() => {})
+  }, [todos.length, persist, showToast])
+
   // ── Edit handler ──────────────────────────────────────────
   const handleEdit = useCallback((id: string) => {
     setTodos((prev) => {
@@ -240,6 +249,16 @@ export default function Home() {
 
         {/* 件数バッジ */}
         <span className="text-xs text-slate-500 font-semibold">全 {todos.length} 件</span>
+
+        {/* 全件削除（テスト用） */}
+        {todos.length > 0 && (
+          <button
+            onClick={deleteAllTodos}
+            className="text-xs px-2.5 py-1 border border-red-200 text-red-400 rounded-lg hover:bg-red-50 hover:text-red-600 hover:border-red-400 transition-all"
+          >
+            🗑 全件削除
+          </button>
+        )}
 
         {/* View toggle */}
         <div className="ml-auto flex bg-slate-100 rounded-lg p-0.5 gap-0.5">
