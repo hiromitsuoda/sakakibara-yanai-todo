@@ -71,9 +71,11 @@ export default function Home() {
   }, [])
 
   // ── 状態を更新して localStorage にも保存する共通関数 ────────
+  // ※ applyOverdue は初回ロード時のみ適用。ユーザーが手動でステータスを
+  //    変更した場合は上書きしない（期限超過でも「進行中」に戻せる）
   const persist = useCallback((updater: (prev: Todo[]) => Todo[]) => {
     setTodos((prev) => {
-      const next = applyOverdue(updater(prev))
+      const next = updater(prev)
       saveToLS(next)
       return next
     })
