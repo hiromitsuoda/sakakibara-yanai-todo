@@ -55,6 +55,7 @@ export default function Home() {
   const [showImport,    setShowImport]    = useState(false)
   const [showQr,        setShowQr]        = useState(false)
   const [showStaffMaster, setShowStaffMaster] = useState(false)
+  const [showDeleteRange, setShowDeleteRange] = useState(false)
   const [addStatus,     setAddStatus]     = useState<Status | null>(null)
   const [editingTodo,   setEditingTodo]   = useState<Todo | null>(null)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' | 'info' } | null>(null)
@@ -212,6 +213,26 @@ export default function Home() {
     deleteAllTodosFromDB().catch(() => {})
   }, [todos.length, persist, showToast])
 
+  // ── 期間削除 ────────────────────────────────────────────────
+  const deleteByRange = useCallback(async (from: string, to: string) => {
+    const targets = todos.filter((t) => {
+      if (!t.deadline) return false
+      const dl = t.deadline.replace(/\//g, '-')
+      return (!from || dl >= from) && (!to || dl <= to)
+    })
+    if (targets.length === 0) {
+      showToast('対象のTODOが見つかりませんでした', 'info')
+      return
+    }
+    const ids = new Set(targets.map((t) => t.id))
+    persist((prev) => prev.filter((t) => !ids.has(t.id)))
+    showToast(`🗑 ${targets.length}件を削除しました`, 'info')
+    // Supabase からも削除
+    for (const t of targets) {
+      deleteTodoDB(t.id).catch(() => {})
+    }
+  }, [todos, persist, showToast])
+
   // ── Edit handler ──────────────────────────────────────────
   const handleEdit = useCallback((id: string) => {
     const t = todos.find((x) => x.id === id)
@@ -317,6 +338,16 @@ export default function Home() {
           <span className="text-xs text-slate-500 font-semibold">
             {filteredTodos.length} 件表示
           </span>
+
+          {/* 期間削除 */}
+          {todos.length > 0 && (
+            <button
+              onClick={() => setShowDeleteRange(true)}
+              className="text-xs px-2.5 py-1 border border-orange-200 text-orange-400 rounded-lg hover:bg-orange-50 hover:text-orange-600 hover:border-orange-400 transition-all"
+            >
+              📅 期間削除
+            </button>
+          )}
 
           {/* 全件削除（テスト用） */}
           {todos.length > 0 && (
@@ -448,6 +479,7 @@ export default function Home() {
           onClose={() => setShowImport(false)}
           onImport={importTodos}
           resolveStaffId={resolveStaffId}
+          existingTodos={todos}
         />
       )}
       {showStaffMaster && (
@@ -475,6 +507,18 @@ export default function Home() {
           onSave={(id, updates) => {
             updateTodo(id, updates)
             setEditingTodo(null)
+          }}
+        />
+      )}
+
+      {/* 期間削除モーダル */}
+      {showDeleteRange && (
+        <DeleteRangeModal
+          todos={todos}
+          onClose={() => setShowDeleteRange(false)}
+          onDelete={(from, to) => {
+            deleteByRange(from, to)
+            setShowDeleteRange(false)
           }}
         />
       )}
@@ -647,6 +691,151 @@ function ListView({
       {sorted.length === 0 && (
         <div className="text-center py-20 text-slate-400 text-sm">該当するTODOはありません</div>
       )}
+    </div>
+  )
+}
+
+// ── 期間削除モーダル ────────────────────────────────────────────
+function DeleteRangeModal({
+  todos,
+  onClose,
+  onDelete,
+}: {
+  todos: Todo[]
+  onClose: () => void
+  onDelete: (from: string, to: string) => void
+}) {
+  const [from, setFrom] = useState('')
+  const [to,   setTo]   = useState('')
+  const [confirmed, setConfirmed] = useState(false)
+
+  const targets = todos.filter((t) => {
+    if (!t.deadline) return false
+    const dl = t.deadline.replace(/\//g, '-')
+    return (!from || dl >= from) && (!to || dl <= to)
+  })
+
+  const handleConfirm = () => {
+    if (targets.length === 0) return
+    setConfirmed(true)
+  }
+
+  const handleDelete = () => {
+    onDelete(from, to)
+  }
+
+  const rangeLabel = from && to ? `${from} 〜 ${to}`
+    : from ? `${from} 以降`
+    : to   ? `${to} 以前`
+    : '全期間'
+
+  return (
+    <div className="modal-backdrop fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+      <div className="modal-content bg-white rounded-2xl shadow-2xl w-full max-w-md">
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100">
+          <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center text-lg">📅</div>
+          <div>
+            <h2 className="text-sm font-bold text-slate-800">期間指定削除</h2>
+            <p className="text-xs text-slate-500">期限日の範囲でTODOをまとめて削除します</p>
+          </div>
+          <button onClick={onClose} className="ml-auto text-slate-400 hover:text-slate-600 text-lg">✕</button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {!confirmed ? (
+            <>
+              {/* 日付入力 */}
+              <div>
+                <label className="text-xs font-bold text-slate-500 block mb-1.5">削除する期限日の範囲</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={from}
+                    onChange={(e) => setFrom(e.target.value)}
+                    className="flex-1 text-sm border border-slate-200 rounded-lg px-3 py-2 focus:border-orange-400 focus:outline-none"
+                  />
+                  <span className="text-slate-400 text-sm shrink-0">〜</span>
+                  <input
+                    type="date"
+                    value={to}
+                    onChange={(e) => setTo(e.target.value)}
+                    className="flex-1 text-sm border border-slate-200 rounded-lg px-3 py-2 focus:border-orange-400 focus:outline-none"
+                  />
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1">※ 片方のみ入力で「以降」「以前」として機能します</p>
+              </div>
+
+              {/* 対象件数プレビュー */}
+              <div className={`rounded-xl p-3 text-sm font-semibold text-center ${
+                targets.length > 0 ? 'bg-orange-50 text-orange-700 border border-orange-200' : 'bg-slate-50 text-slate-400'
+              }`}>
+                {targets.length > 0
+                  ? `📅 ${rangeLabel} の ${targets.length} 件が削除対象です`
+                  : '対象のTODOはありません'}
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2">
+                <button
+                  onClick={onClose}
+                  className="flex-1 py-2.5 text-xs font-semibold border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-all"
+                >
+                  キャンセル
+                </button>
+                <button
+                  onClick={handleConfirm}
+                  disabled={targets.length === 0}
+                  className="flex-1 py-2.5 text-xs font-bold bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-all disabled:opacity-40"
+                >
+                  削除を確認する →
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* 削除確認 */}
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center space-y-2">
+                <p className="text-2xl">⚠️</p>
+                <p className="text-sm font-bold text-red-700">本当に削除しますか？</p>
+                <p className="text-xs text-red-600">
+                  <strong>{rangeLabel}</strong> の <strong>{targets.length} 件</strong>を削除します。<br />
+                  この操作は元に戻せません。
+                </p>
+              </div>
+
+              {/* 対象リスト（最大5件表示） */}
+              <div className="space-y-1 max-h-40 overflow-y-auto">
+                {targets.slice(0, 5).map((t) => (
+                  <div key={t.id} className="flex items-center gap-2 text-xs text-slate-600 bg-slate-50 rounded-lg px-3 py-1.5">
+                    {t.link_no && <span className="text-slate-400 font-bold">#{t.link_no}</span>}
+                    <span className="truncate">{t.title}</span>
+                    {t.deadline && <span className="ml-auto text-slate-400 shrink-0">{t.deadline}</span>}
+                  </div>
+                ))}
+                {targets.length > 5 && (
+                  <p className="text-xs text-slate-400 text-center py-1">... 他 {targets.length - 5} 件</p>
+                )}
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setConfirmed(false)}
+                  className="flex-1 py-2.5 text-xs font-semibold border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-all"
+                >
+                  ← 戻る
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="flex-1 py-2.5 text-xs font-bold bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all"
+                >
+                  🗑 {targets.length} 件を削除する
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

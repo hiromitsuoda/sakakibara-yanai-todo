@@ -6,6 +6,7 @@ interface Props {
   onClose: () => void
   onImport: (todos: Partial<Todo>[]) => void
   resolveStaffId: (csvName: string) => string  // useStaff() から渡す
+  existingTodos: Todo[]                        // 重複チェック用
 }
 
 type Step = 'select' | 'preview' | 'done'
@@ -175,7 +176,7 @@ const DEMO_ROWS: ParsedRow[] = [
 
 // ── コンポーネント本体 ────────────────────────────────────────
 
-export default function ImportModal({ onClose, onImport, resolveStaffId }: Props) {
+export default function ImportModal({ onClose, onImport, resolveStaffId, existingTodos }: Props) {
   const [step, setStep]         = useState<Step>('select')
   const [tab, setTab]           = useState<'csv' | 'pdf'>('csv')
   const [fileName, setFileName] = useState('')
@@ -183,7 +184,21 @@ export default function ImportModal({ onClose, onImport, resolveStaffId }: Props
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([])
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [errorMsg, setErrorMsg] = useState('')
+  const [duplicateIndices, setDuplicateIndices] = useState<Set<number>>(new Set())
   const fileRef = useRef<HTMLInputElement>(null)
+
+  /** 重複チェック: link_no一致 or タイトル+期限一致 */
+  const checkDuplicates = (rows: ParsedRow[]): Set<number> => {
+    const dupSet = new Set<number>()
+    rows.forEach((row, i) => {
+      const isDup = existingTodos.some((t) => {
+        if (row.link_no && t.link_no) return row.link_no === t.link_no
+        return t.title === row.title && t.deadline === row.deadline
+      })
+      if (isDup) dupSet.add(i)
+    })
+    return dupSet
+  }
 
   // ── ファイル読み込み ─────────────────────────────────────
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -210,9 +225,13 @@ export default function ImportModal({ onClose, onImport, resolveStaffId }: Props
           return
         }
 
+        // 重複チェック
+        const dups = checkDuplicates(rows)
+        setDuplicateIndices(dups)
+
         setParsedRows(rows)
-        // 全行をデフォルト選択
-        setSelected(new Set(rows.map((_, i) => i)))
+        // 重複行はデフォルト非選択
+        setSelected(new Set(rows.map((_, i) => i).filter((i) => !dups.has(i))))
         setStep('preview')
       } catch (err) {
         setErrorMsg('CSVの解析に失敗しました。文字コードを確認してください。')
@@ -225,8 +244,10 @@ export default function ImportModal({ onClose, onImport, resolveStaffId }: Props
 
   // ── デモプレビュー ───────────────────────────────────────
   const handleDemo = () => {
+    const dups = checkDuplicates(DEMO_ROWS)
+    setDuplicateIndices(dups)
     setParsedRows(DEMO_ROWS)
-    setSelected(new Set(DEMO_ROWS.map((_, i) => i)))
+    setSelected(new Set(DEMO_ROWS.map((_, i) => i).filter((i) => !dups.has(i))))
     setFileName('日報CSV出力.CSV（デモ）')
     setStep('preview')
   }
@@ -380,6 +401,23 @@ export default function ImportModal({ onClose, onImport, resolveStaffId }: Props
               <span className="ml-auto text-slate-400">{parsedRows.length}件検出</span>
             </div>
 
+            {/* 重複警告 */}
+            {duplicateIndices.size > 0 && (
+              <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 text-xs text-amber-700 space-y-1">
+                <p className="font-bold">⚠ {duplicateIndices.size}件の重複が検出されました</p>
+                <p className="text-amber-600">既に登録済みのデータと一致するため、デフォルトでチェックを外しています。</p>
+                <ul className="mt-1 space-y-0.5 text-amber-700">
+                  {Array.from(duplicateIndices).map((i) => (
+                    <li key={i} className="flex items-center gap-1">
+                      <span>・</span>
+                      {parsedRows[i].link_no && <span className="font-bold">#{parsedRows[i].link_no}</span>}
+                      <span className="truncate">{parsedRows[i].title}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             {/* 全選択/解除 */}
             <div className="flex items-center justify-between">
               <p className="text-xs text-slate-600 font-medium">取り込むTODOを選択してください</p>
@@ -397,7 +435,9 @@ export default function ImportModal({ onClose, onImport, resolveStaffId }: Props
                 <label
                   key={i}
                   className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
-                    selected.has(i) ? 'border-teal-400 bg-teal-50' : 'border-slate-200 bg-white hover:border-slate-300'
+                    duplicateIndices.has(i)
+                      ? 'border-amber-300 bg-amber-50'
+                      : selected.has(i) ? 'border-teal-400 bg-teal-50' : 'border-slate-200 bg-white hover:border-slate-300'
                   }`}
                 >
                   <input
@@ -411,6 +451,9 @@ export default function ImportModal({ onClose, onImport, resolveStaffId }: Props
                     <div className="flex items-center gap-2 mb-0.5">
                       {row.link_no && (
                         <span className="text-[10px] text-slate-400 font-bold">#{row.link_no}</span>
+                      )}
+                      {duplicateIndices.has(i) && (
+                        <span className="text-[10px] font-bold bg-amber-200 text-amber-700 px-1.5 py-0.5 rounded">⚠ 重複</span>
                       )}
                       <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
                         row.priority === '高' ? 'bg-red-50 text-red-600' :
