@@ -104,6 +104,25 @@ export default function Home() {
       .finally(() => setLoading(false))
   }, [showToast])
 
+  // ── 期限超過の自動チェック（1分ごと） ──────────────────────
+  // ページを開いたまま日付が変わっても todo/doing → overdue に自動更新
+  useEffect(() => {
+    const check = () => {
+      setTodos((prev) => {
+        const next = applyOverdue(prev)
+        const changed = next.some((t, i) => t.status !== prev[i].status)
+        if (changed) {
+          saveToLS(next)
+          return next
+        }
+        return prev
+      })
+    }
+    // 1分ごとにチェック
+    const id = setInterval(check, 60_000)
+    return () => clearInterval(id)
+  }, [])
+
   // ── CRUD ──────────────────────────────────────────────────
 
   const updateTodo = useCallback((id: string, updates: Partial<Todo>) => {
