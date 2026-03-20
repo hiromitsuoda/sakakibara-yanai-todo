@@ -17,10 +17,10 @@ import AddTodoModal   from '@/components/AddTodoModal'
 import EditTodoModal  from '@/components/EditTodoModal'
 import Toast          from '@/components/Toast'
 import QrModal        from '@/components/QrModal'
-import TimelineView   from '@/components/TimelineView'
+import WeeklyCalendarView from '@/components/WeeklyCalendarView'
 import StaffMasterModal from '@/components/StaffMasterModal'
 
-type View = 'kanban' | 'list' | 'timeline'
+type View = 'kanban' | 'weekly' | 'list'
 
 // ── localStorage ヘルパー ────────────────────────────────────
 const LS_KEY = 'todo_items'
@@ -297,9 +297,9 @@ export default function Home() {
           {/* View toggle */}
           <div className="ml-auto flex bg-slate-100 rounded-lg p-0.5 gap-0.5">
             {([
-              { key: 'kanban',   label: 'カンバン' },
-              { key: 'timeline', label: 'タイムライン' },
-              { key: 'list',     label: 'リスト' },
+              { key: 'kanban', label: 'カンバン' },
+              { key: 'weekly', label: '週間' },
+              { key: 'list',   label: 'リスト' },
             ] as { key: View; label: string }[]).map(({ key, label }) => (
               <button
                 key={key}
@@ -373,8 +373,8 @@ export default function Home() {
             onEdit={handleEdit}
             onAddClick={(s) => setAddStatus(s)}
           />
-        ) : view === 'timeline' ? (
-          <TimelineView
+        ) : view === 'weekly' ? (
+          <WeeklyCalendarView
             todos={filteredTodos}
             staffList={staffList}
             onUpdate={updateTodo}
@@ -395,9 +395,9 @@ export default function Home() {
       {/* Mobile bottom nav */}
       <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 h-14 flex z-40">
         {[
-          { icon: '📋', label: 'カンバン',     action: () => setView('kanban') },
-          { icon: '📅', label: 'タイムライン', action: () => setView('timeline') },
-          { icon: '📊', label: 'リスト',       action: () => setView('list') },
+          { icon: '📋', label: 'カンバン', action: () => setView('kanban') },
+          { icon: '📅', label: '週間',     action: () => setView('weekly') },
+          { icon: '📊', label: 'リスト',   action: () => setView('list') },
           { icon: '⚙️', label: '設定',         action: () => setShowStaffMaster(true) },
         ].map(({ icon, label, action }) => (
           <button key={label} onClick={action} className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400">
