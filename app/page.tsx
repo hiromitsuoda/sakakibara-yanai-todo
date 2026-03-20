@@ -193,12 +193,9 @@ export default function Home() {
 
   // ── Edit handler ──────────────────────────────────────────
   const handleEdit = useCallback((id: string) => {
-    setTodos((prev) => {
-      const t = prev.find((x) => x.id === id)
-      if (t) setEditingTodo(t)
-      return prev
-    })
-  }, [])
+    const t = todos.find((x) => x.id === id)
+    if (t) setEditingTodo(t)
+  }, [todos])
 
   // ── Filtering ─────────────────────────────────────────────
   const filteredTodos = useMemo(() => {
