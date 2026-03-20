@@ -24,6 +24,8 @@ export default function EditTodoModal({ todo, staffList, onClose, onSave }: Prop
   const [deadline, setDeadline] = useState(
     todo.deadline ? todo.deadline.replace(/\//g, '-') : '',
   )
+  const [startTime, setStartTime] = useState(todo.start_time ?? '')
+  const [endTime,   setEndTime]   = useState(todo.end_time   ?? '')
   const [staffId,  setStaffId]  = useState(todo.staff_id)
   const [priority, setPriority] = useState<Priority>(todo.priority)
   const [status,   setStatus]   = useState<Status>(todo.status)
@@ -35,12 +37,14 @@ export default function EditTodoModal({ todo, staffList, onClose, onSave }: Prop
     if (errs.length > 0) { setErrors(errs); return }
 
     onSave(todo.id, {
-      link_no:  linkNo.trim() || undefined,
-      title:    title.trim(),
-      detail:   detail.trim() || undefined,
-      task:     task.trim() || undefined,
-      deadline: deadline ? deadline.replace(/-/g, '/') : undefined,
-      staff_id: staffId,
+      link_no:    linkNo.trim() || undefined,
+      title:      title.trim(),
+      detail:     detail.trim() || undefined,
+      task:       task.trim() || undefined,
+      deadline:   deadline ? deadline.replace(/-/g, '/') : undefined,
+      start_time: startTime || undefined,
+      end_time:   endTime   || undefined,
+      staff_id:   staffId,
       priority,
       status,
     })
@@ -124,6 +128,26 @@ export default function EditTodoModal({ todo, staffList, onClose, onSave }: Prop
               onChange={(e) => setDeadline(e.target.value)}
               className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:border-teal-500 focus:outline-none"
             />
+          </div>
+
+          {/* Time */}
+          <div>
+            <label className="text-xs font-bold text-slate-500 block mb-1.5">作業時間（任意）</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                className="flex-1 text-sm border border-slate-200 rounded-lg px-3 py-2 focus:border-teal-500 focus:outline-none"
+              />
+              <span className="text-slate-400 text-sm">〜</span>
+              <input
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                className="flex-1 text-sm border border-slate-200 rounded-lg px-3 py-2 focus:border-teal-500 focus:outline-none"
+              />
+            </div>
           </div>
 
           {/* Staff & Priority */}

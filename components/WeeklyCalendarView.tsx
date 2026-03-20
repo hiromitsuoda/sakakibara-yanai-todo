@@ -200,6 +200,13 @@ export default function WeeklyCalendarView({ todos, staffList, onUpdate, onDelet
                           {todo.title}
                         </p>
 
+                        {/* 時間 */}
+                        {(todo.start_time || todo.end_time) && (
+                          <p className="text-[9px] text-slate-400 mt-0.5">
+                            🕐 {todo.start_time}{todo.end_time ? `〜${todo.end_time}` : ''}
+                          </p>
+                        )}
+
                         {/* 担当者アバター */}
                         {staff && (
                           <div className="flex items-center gap-1 mt-1">

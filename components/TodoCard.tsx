@@ -103,6 +103,11 @@ export default function TodoCard({ todo, staffList, onUpdate, onDelete, onEdit }
               {todo.deadline}
             </span>
           )}
+          {(todo.start_time || todo.end_time) && (
+            <span className="text-slate-400 font-medium">
+              🕐 {todo.start_time}{todo.end_time ? `〜${todo.end_time}` : ''}
+            </span>
+          )}
           <EstimateButton attachments={todo.attachments} />
           {todo.attachments.length > 0 && (
             <span className="text-slate-400">📎 {todo.attachments.length}</span>
