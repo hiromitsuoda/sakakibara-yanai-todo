@@ -230,8 +230,8 @@ export default function Home() {
         || (t.task ?? '').toLowerCase().includes(q)
 
       if (filterMode === 'active') {
-        // ① 完了以外（期間指定なし）
-        return matchStaff && matchSearch && t.status !== 'done'
+        // ① 完了・キャンセル以外（期間指定なし）
+        return matchStaff && matchSearch && t.status !== 'done' && t.status !== 'cancelled'
       } else {
         // ② 期間指定・全ステータス
         let matchDate = true
@@ -262,11 +262,12 @@ export default function Home() {
 
   // ── Counts ────────────────────────────────────────────────
   const counts = useMemo(() => ({
-    overdue: filteredTodos.filter((t) => t.status === 'overdue').length,
-    todo:    filteredTodos.filter((t) => t.status === 'todo').length,
-    doing:   filteredTodos.filter((t) => t.status === 'doing').length,
-    done:    filteredTodos.filter((t) => t.status === 'done').length,
-  }), [filteredTodos])
+    overdue:   filteredTodos.filter((t) => t.status === 'overdue').length,
+    todo:      filteredTodos.filter((t) => t.status === 'todo').length,
+    doing:     filteredTodos.filter((t) => t.status === 'doing').length,
+    done:      filteredTodos.filter((t) => t.status === 'done').length,
+    cancelled: todos.filter((t) => t.status === 'cancelled').length,
+  }), [filteredTodos, todos])
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
@@ -515,10 +516,11 @@ function ListView({
   })
 
   const STATUS_BADGE_LIST: Record<string, { label: string; cls: string }> = {
-    overdue: { label: '期限超過', cls: 'bg-red-100 text-red-600' },
-    todo:    { label: '未着手',   cls: 'bg-amber-100 text-amber-600' },
-    doing:   { label: '進行中',   cls: 'bg-blue-100 text-blue-600' },
-    done:    { label: '完了',     cls: 'bg-green-100 text-green-600' },
+    overdue:   { label: '期限超過',   cls: 'bg-red-100 text-red-600' },
+    todo:      { label: '未着手',     cls: 'bg-amber-100 text-amber-600' },
+    doing:     { label: '進行中',     cls: 'bg-blue-100 text-blue-600' },
+    done:      { label: '完了',       cls: 'bg-green-100 text-green-600' },
+    cancelled: { label: 'キャンセル', cls: 'bg-slate-100 text-slate-500' },
   }
 
   return (

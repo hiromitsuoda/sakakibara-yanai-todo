@@ -11,10 +11,11 @@ interface Props {
 
 const PRIORITY_OPTIONS: Priority[] = ['高', '中', '低']
 const STATUS_OPTIONS: { value: Status; label: string; icon: string }[] = [
-  { value: 'todo',    label: '未着手',   icon: '📋' },
-  { value: 'doing',   label: '進行中',   icon: '⏳' },
-  { value: 'done',    label: '完了',     icon: '✅' },
-  { value: 'overdue', label: '期限超過', icon: '⚠️' },
+  { value: 'todo',      label: '未着手',     icon: '📋' },
+  { value: 'doing',     label: '進行中',     icon: '⏳' },
+  { value: 'done',      label: '完了',       icon: '✅' },
+  { value: 'overdue',   label: '期限超過',   icon: '⚠️' },
+  { value: 'cancelled', label: 'キャンセル', icon: '🚫' },
 ]
 export default function EditTodoModal({ todo, staffList, onClose, onSave }: Props) {
   const [linkNo,   setLinkNo]   = useState(todo.link_no ?? '')
@@ -196,8 +197,9 @@ export default function EditTodoModal({ todo, staffList, onClose, onSave }: Prop
                   onClick={() => setStatus(value)}
                   className={`py-2 rounded-lg text-xs font-semibold transition-all border ${
                     status === value
-                      ? value === 'overdue' ? 'bg-red-500 text-white border-red-500'
-                        : value === 'done' ? 'bg-green-500 text-white border-green-500'
+                      ? value === 'overdue'   ? 'bg-red-500 text-white border-red-500'
+                        : value === 'done'    ? 'bg-green-500 text-white border-green-500'
+                        : value === 'cancelled' ? 'bg-slate-500 text-white border-slate-500'
                         : 'bg-teal-600 text-white border-teal-600'
                       : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
                   }`}

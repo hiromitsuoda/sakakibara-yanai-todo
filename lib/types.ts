@@ -1,4 +1,4 @@
-export type Status = 'overdue' | 'todo' | 'doing' | 'done'
+export type Status = 'overdue' | 'todo' | 'doing' | 'done' | 'cancelled'
 export type Priority = '高' | '中' | '低'
 export type TagType = '許可申請' | '変更届' | '相談対応' | '法人' | '更新' | 'その他'
 
@@ -51,10 +51,11 @@ export const DEFAULT_STAFF_LIST: Staff[] = [
 export const STAFF_LIST: Staff[] = DEFAULT_STAFF_LIST
 
 export const STATUS_CONFIG: Record<Status, { label: string; color: string; bgColor: string; borderColor: string; icon: string }> = {
-  overdue: { label: '期限超過', color: '#dc2626', bgColor: '#fef2f2', borderColor: '#fecaca', icon: '⚠' },
-  todo:    { label: '未着手',   color: '#ea580c', bgColor: '#fff7ed', borderColor: '#fed7aa', icon: '📋' },
-  doing:   { label: '進行中',   color: '#2563eb', bgColor: '#eff6ff', borderColor: '#bfdbfe', icon: '⏳' },
-  done:    { label: '完了',     color: '#16a34a', bgColor: '#f0fdf4', borderColor: '#bbf7d0', icon: '✅' },
+  overdue:   { label: '期限超過',   color: '#dc2626', bgColor: '#fef2f2', borderColor: '#fecaca', icon: '⚠' },
+  todo:      { label: '未着手',     color: '#ea580c', bgColor: '#fff7ed', borderColor: '#fed7aa', icon: '📋' },
+  doing:     { label: '進行中',     color: '#2563eb', bgColor: '#eff6ff', borderColor: '#bfdbfe', icon: '⏳' },
+  done:      { label: '完了',       color: '#16a34a', bgColor: '#f0fdf4', borderColor: '#bbf7d0', icon: '✅' },
+  cancelled: { label: 'キャンセル', color: '#64748b', bgColor: '#f8fafc', borderColor: '#e2e8f0', icon: '🚫' },
 }
 
 export const TAG_CONFIG: Record<TagType, { bg: string; text: string }> = {

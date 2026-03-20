@@ -12,7 +12,7 @@ interface Props {
   onAddClick: (status: Status) => void
 }
 
-const COLUMNS: Status[] = ['overdue', 'todo', 'doing', 'done']
+const COLUMNS: Status[] = ['overdue', 'todo', 'doing', 'done', 'cancelled']
 
 export default function KanbanBoard({ todos, staffList, onUpdate, onDelete, onEdit, onAddClick }: Props) {
   return (

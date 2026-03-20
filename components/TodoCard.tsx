@@ -12,10 +12,11 @@ interface Props {
 }
 
 const STATUS_NEXT: Record<Status, { label: string; next: Status } | null> = {
-  overdue: { label: '未着手へ', next: 'todo' },
-  todo:    { label: '進行中へ', next: 'doing' },
-  doing:   { label: '完了にする', next: 'done' },
-  done:    null,
+  overdue:   { label: '未着手へ',   next: 'todo' },
+  todo:      { label: '進行中へ',   next: 'doing' },
+  doing:     { label: '完了にする', next: 'done' },
+  done:      null,
+  cancelled: null,
 }
 
 export default function TodoCard({ todo, staffList, onUpdate, onDelete, onEdit }: Props) {
@@ -24,9 +25,10 @@ export default function TodoCard({ todo, staffList, onUpdate, onDelete, onEdit }
   const [saving, setSaving] = useState(false)
 
   const staff = staffList.find((s) => s.id === todo.staff_id)
-  const isDone = todo.status === 'done'
-  const isOverdue = todo.status === 'overdue'
-  const nextAction = STATUS_NEXT[todo.status]
+  const isDone      = todo.status === 'done'
+  const isCancelled = todo.status === 'cancelled'
+  const isOverdue   = todo.status === 'overdue'
+  const nextAction  = STATUS_NEXT[todo.status]
 
   const handleSaveComment = async () => {
     setSaving(true)
@@ -47,8 +49,8 @@ export default function TodoCard({ todo, staffList, onUpdate, onDelete, onEdit }
   return (
     <div
       className={`kanban-card bg-white rounded-xl border overflow-hidden cursor-pointer select-none
-        ${isDone ? 'opacity-60' : ''}
-        ${isOverdue ? 'border-red-200' : 'border-slate-200'}
+        ${isDone || isCancelled ? 'opacity-60' : ''}
+        ${isOverdue ? 'border-red-200' : isCancelled ? 'border-slate-300' : 'border-slate-200'}
         ${open ? 'shadow-lg' : 'shadow-sm hover:border-teal-300'}
       `}
     >
@@ -79,7 +81,7 @@ export default function TodoCard({ todo, staffList, onUpdate, onDelete, onEdit }
         </div>
 
         {/* Title */}
-        <p className={`text-sm font-semibold leading-snug mb-1.5 ${isDone ? 'line-through text-slate-400' : 'text-slate-800'}`}>
+        <p className={`text-sm font-semibold leading-snug mb-1.5 ${isDone || isCancelled ? 'line-through text-slate-400' : 'text-slate-800'}`}>
           {todo.title}
         </p>
 
@@ -98,8 +100,8 @@ export default function TodoCard({ todo, staffList, onUpdate, onDelete, onEdit }
         {/* Footer */}
         <div className="flex items-center gap-2 text-[11px]">
           {todo.deadline && (
-            <span className={`font-medium ${isOverdue ? 'text-red-600' : isDone ? 'text-green-600' : 'text-slate-500'}`}>
-              {isOverdue ? '⚠ ' : isDone ? '✓ ' : '📅 '}
+            <span className={`font-medium ${isOverdue ? 'text-red-600' : isDone ? 'text-green-600' : isCancelled ? 'text-slate-400' : 'text-slate-500'}`}>
+              {isOverdue ? '⚠ ' : isDone ? '✓ ' : isCancelled ? '🚫 ' : '📅 '}
               {todo.deadline}
             </span>
           )}
@@ -232,6 +234,14 @@ export default function TodoCard({ todo, staffList, onUpdate, onDelete, onEdit }
                   className="text-[11px] px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 transition-all"
                 >
                   ↩ 進行中に戻す
+                </button>
+              )}
+              {isCancelled && (
+                <button
+                  onClick={() => onUpdate(todo.id, { status: 'todo' })}
+                  className="text-[11px] px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 transition-all"
+                >
+                  ↩ 未着手に戻す
                 </button>
               )}
             </div>

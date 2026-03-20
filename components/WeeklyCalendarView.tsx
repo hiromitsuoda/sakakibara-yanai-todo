@@ -33,16 +33,18 @@ function toSlash(date: Date): string {
 }
 
 const STATUS_BAR: Record<string, string> = {
-  overdue: 'border-red-400',
-  todo:    'border-amber-400',
-  doing:   'border-blue-400',
-  done:    'border-green-400',
+  overdue:   'border-red-400',
+  todo:      'border-amber-400',
+  doing:     'border-blue-400',
+  done:      'border-green-400',
+  cancelled: 'border-slate-300',
 }
 const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
-  overdue: { label: '期限超過', cls: 'bg-red-100 text-red-600' },
-  todo:    { label: '未着手',   cls: 'bg-amber-100 text-amber-600' },
-  doing:   { label: '進行中',   cls: 'bg-blue-100 text-blue-600' },
-  done:    { label: '完了',     cls: 'bg-green-100 text-green-600' },
+  overdue:   { label: '期限超過',   cls: 'bg-red-100 text-red-600' },
+  todo:      { label: '未着手',     cls: 'bg-amber-100 text-amber-600' },
+  doing:     { label: '進行中',     cls: 'bg-blue-100 text-blue-600' },
+  done:      { label: '完了',       cls: 'bg-green-100 text-green-600' },
+  cancelled: { label: 'キャンセル', cls: 'bg-slate-100 text-slate-500' },
 }
 const PRIORITY_DOT: Record<string, string> = {
   高: 'bg-red-500',
