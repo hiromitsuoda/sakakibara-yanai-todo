@@ -226,6 +226,21 @@ export default function Home() {
     })
   }, [todos, selectedStaffId, searchQuery, filterMode, dateFrom, dateTo])
 
+  // 週間ビュー用: 担当者・検索のみ適用（ステータスフィルター除外）
+  // カレンダーは完了済みも含め週内の全TODOを表示する
+  const weeklyTodos = useMemo(() => {
+    return todos.filter((t) => {
+      const matchStaff  = selectedStaffId === 'all' || t.staff_id === selectedStaffId
+      const q           = searchQuery.toLowerCase().replace(/^#/, '')
+      const matchSearch = !q
+        || t.title.toLowerCase().includes(q)
+        || (t.link_no ?? '').includes(q)
+        || (t.detail ?? '').toLowerCase().includes(q)
+        || (t.task ?? '').toLowerCase().includes(q)
+      return matchStaff && matchSearch
+    })
+  }, [todos, selectedStaffId, searchQuery])
+
   // ── Counts ────────────────────────────────────────────────
   const counts = useMemo(() => ({
     overdue: filteredTodos.filter((t) => t.status === 'overdue').length,
@@ -374,7 +389,7 @@ export default function Home() {
           />
         ) : view === 'weekly' ? (
           <WeeklyCalendarView
-            todos={filteredTodos}
+            todos={weeklyTodos}
             staffList={staffList}
             onUpdate={updateTodo}
             onDelete={deleteTodo}
