@@ -38,6 +38,12 @@ const STATUS_BAR: Record<string, string> = {
   doing:   'border-blue-400',
   done:    'border-green-400',
 }
+const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
+  overdue: { label: '期限超過', cls: 'bg-red-100 text-red-600' },
+  todo:    { label: '未着手',   cls: 'bg-amber-100 text-amber-600' },
+  doing:   { label: '進行中',   cls: 'bg-blue-100 text-blue-600' },
+  done:    { label: '完了',     cls: 'bg-green-100 text-green-600' },
+}
 const PRIORITY_DOT: Record<string, string> = {
   高: 'bg-red-500',
   中: 'bg-amber-400',
@@ -173,11 +179,19 @@ export default function WeeklyCalendarView({ todos, staffList, onUpdate, onDelet
                           todo.status === 'overdue' ? 'bg-red-50' : 'bg-white'
                         } shadow-sm`}
                       >
-                        {/* 上段: Link番号 + 優先度ドット */}
+                        {/* 上段: ステータスバッジ + 優先度ドット */}
                         <div className="flex items-center gap-1 mb-0.5">
                           {todo.link_no && (
                             <span className="text-[9px] text-slate-400 font-bold leading-none">#{todo.link_no}</span>
                           )}
+                          {(() => {
+                            const badge = STATUS_BADGE[todo.status]
+                            return badge ? (
+                              <span className={`text-[8px] font-bold px-1 py-0.5 rounded leading-none ${badge.cls}`}>
+                                {badge.label}
+                              </span>
+                            ) : null
+                          })()}
                           <span className={`ml-auto w-1.5 h-1.5 rounded-full shrink-0 ${PRIORITY_DOT[todo.priority] ?? 'bg-slate-300'}`} />
                         </div>
 
