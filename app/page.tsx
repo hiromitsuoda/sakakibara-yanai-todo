@@ -487,134 +487,143 @@ function ListView({
 
   const getComment = (t: Todo) => commentMap[t.id] ?? t.comment ?? ''
 
-  const statuses: Status[] = ['overdue', 'todo', 'doing', 'done']
+  // 期限日昇順ソート（期限なしは末尾）
+  const sorted = [...todos].sort((a, b) => {
+    if (!a.deadline && !b.deadline) return 0
+    if (!a.deadline) return 1
+    if (!b.deadline) return -1
+    return a.deadline.localeCompare(b.deadline)
+  })
+
+  const STATUS_BADGE_LIST: Record<string, { label: string; cls: string }> = {
+    overdue: { label: '期限超過', cls: 'bg-red-100 text-red-600' },
+    todo:    { label: '未着手',   cls: 'bg-amber-100 text-amber-600' },
+    doing:   { label: '進行中',   cls: 'bg-blue-100 text-blue-600' },
+    done:    { label: '完了',     cls: 'bg-green-100 text-green-600' },
+  }
 
   return (
-    <div className="p-4 space-y-6 pb-20">
-      {statuses.map((status) => {
-        const cfg   = STATUS_CONFIG[status]
-        const group = todos.filter((t) => t.status === status)
-        if (group.length === 0) return null
+    <div className="p-3 space-y-1.5 pb-20">
+      {sorted.map((todo) => {
+        const staff  = staffList.find((s) => s.id === todo.staff_id)
+        const isOpen = expandedId === todo.id
+        const cfg    = STATUS_CONFIG[todo.status]
+        const badge  = STATUS_BADGE_LIST[todo.status]
+        const isDone = todo.status === 'done'
         return (
-          <div key={status}>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs font-bold" style={{ color: cfg.color }}>{cfg.icon} {cfg.label}</span>
-              <div className="flex-1 h-px bg-slate-200" />
-              <span className="text-xs text-slate-400">{group.length}件</span>
-            </div>
-            <div className="space-y-2">
-              {group.map((todo) => {
-                const staff  = staffList.find((s) => s.id === todo.staff_id)
-                const isOpen = expandedId === todo.id
-                return (
+          <div
+            key={todo.id}
+            className={`bg-white border rounded-xl overflow-hidden transition-all ${isDone ? 'opacity-60' : ''}`}
+            style={{ borderColor: isOpen ? cfg.color : '#e2e8f0' }}
+          >
+            <div
+              className="flex items-center gap-3 px-4 py-2.5 cursor-pointer"
+              onClick={() => setExpandedId(isOpen ? null : todo.id)}
+            >
+              {/* 完了トグル */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onUpdate(todo.id, { status: isDone ? 'doing' : 'done' })
+                }}
+                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
+                  isDone ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300 hover:border-green-400'
+                }`}
+              >
+                {isDone && <span className="text-[10px]">✓</span>}
+              </button>
+
+              {/* メイン情報 */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {todo.link_no && (
+                    <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">#{todo.link_no}</span>
+                  )}
+                  {badge && (
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${badge.cls}`}>{badge.label}</span>
+                  )}
+                  <p className={`text-sm font-semibold truncate ${isDone ? 'line-through text-slate-400' : 'text-slate-800'}`}>
+                    {todo.title}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  {todo.deadline && (
+                    <span className={`text-[11px] font-medium ${todo.status === 'overdue' ? 'text-red-600' : 'text-slate-400'}`}>
+                      📅 {todo.deadline}
+                    </span>
+                  )}
+                  {(todo.start_time || todo.end_time) && (
+                    <span className="text-[11px] text-slate-400">
+                      🕐 {todo.start_time}{todo.end_time ? `〜${todo.end_time}` : ''}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* 担当者 */}
+              <div className="flex items-center gap-2 shrink-0">
+                {staff && (
                   <div
-                    key={todo.id}
-                    className={`bg-white border rounded-xl overflow-hidden transition-all ${todo.status === 'done' ? 'opacity-60' : ''}`}
-                    style={{ borderColor: isOpen ? cfg.color : '#e2e8f0' }}
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                    style={{ background: staff.color }}
+                    title={staff.name}
                   >
-                    <div
-                      className="flex items-center gap-3 px-4 py-3 cursor-pointer"
-                      onClick={() => setExpandedId(isOpen ? null : todo.id)}
-                    >
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onUpdate(todo.id, { status: todo.status === 'done' ? 'doing' : 'done' })
-                        }}
-                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
-                          todo.status === 'done' ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300 hover:border-green-400'
-                        }`}
-                      >
-                        {todo.status === 'done' && <span className="text-[10px]">✓</span>}
-                      </button>
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-semibold truncate ${todo.status === 'done' ? 'line-through text-slate-400' : ''}`}>
-                          {todo.link_no && (
-                            <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded mr-1.5">#{todo.link_no}</span>
-                          )}
-                          {todo.title}
-                        </p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          {todo.deadline && (
-                            <span className={`text-[11px] ${todo.status === 'overdue' ? 'text-red-600 font-bold' : 'text-slate-400'}`}>
-                              📅 {todo.deadline}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {staff && (
-                          <div
-                            className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                            style={{ background: staff.color }}
-                            title={staff.name}
-                          >
-                            {staff.initial}
-                          </div>
-                        )}
-                        <span className={`text-slate-400 text-xs transition-transform ${isOpen ? 'rotate-180' : ''}`}>▾</span>
-                      </div>
-                    </div>
-                    {isOpen && (
-                      <div className="card-details border-t border-slate-100 bg-slate-50 px-4 py-3 space-y-3">
-                        {todo.detail && <p className="text-xs text-slate-600 leading-relaxed">{todo.detail}</p>}
-                        {todo.task && (
-                          <p className="text-xs text-slate-500 bg-white rounded-lg px-3 py-2 border border-slate-200">
-                            📝 {todo.task}
-                          </p>
-                        )}
-                        {todo.attachments.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5">
-                            {todo.attachments.map((a) => (
-                              <span key={a.id} className="text-[11px] bg-white border border-slate-200 rounded-full px-2.5 py-1">📄 {a.name}</span>
-                            ))}
-                          </div>
-                        )}
-                        <textarea
-                          value={getComment(todo)}
-                          onChange={(e) => setCommentMap((m) => ({ ...m, [todo.id]: e.target.value }))}
-                          placeholder="対応メモ・コメントを入力..."
-                          rows={2}
-                          className="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 focus:border-teal-500 focus:outline-none resize-none bg-white"
-                        />
-                        <div className="flex justify-end gap-2">
-                          <button
-                            onClick={() => { if (confirm(`「${todo.title}」を削除しますか？`)) onDelete(todo.id) }}
-                            className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-red-500"
-                          >
-                            削除
-                          </button>
-                          <button
-                            onClick={() => onEdit(todo.id)}
-                            className="text-xs px-3 py-1.5 rounded-lg border border-blue-200 text-blue-500 hover:bg-blue-50"
-                          >
-                            ✏ 編集
-                          </button>
-                          <button
-                            onClick={() => onUpdate(todo.id, { comment: getComment(todo) })}
-                            className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100"
-                          >
-                            保存
-                          </button>
-                          {todo.status !== 'done' && (
-                            <button
-                              onClick={() => onUpdate(todo.id, { status: 'done' })}
-                              className="text-xs px-3 py-1.5 rounded-lg bg-green-500 text-white hover:bg-green-600"
-                            >
-                              ✓ 完了
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    )}
+                    {staff.initial}
                   </div>
-                )
-              })}
+                )}
+                <span className={`text-slate-400 text-xs transition-transform ${isOpen ? 'rotate-180' : ''}`}>▾</span>
+              </div>
             </div>
+
+            {/* 展開詳細 */}
+            {isOpen && (
+              <div className="card-details border-t border-slate-100 bg-slate-50 px-4 py-3 space-y-3">
+                {todo.detail && <p className="text-xs text-slate-600 leading-relaxed">{todo.detail}</p>}
+                {todo.task && (
+                  <p className="text-xs text-slate-500 bg-white rounded-lg px-3 py-2 border border-slate-200">
+                    📝 {todo.task}
+                  </p>
+                )}
+                {todo.attachments.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {todo.attachments.map((a) => (
+                      <span key={a.id} className="text-[11px] bg-white border border-slate-200 rounded-full px-2.5 py-1">📄 {a.name}</span>
+                    ))}
+                  </div>
+                )}
+                <textarea
+                  value={getComment(todo)}
+                  onChange={(e) => setCommentMap((m) => ({ ...m, [todo.id]: e.target.value }))}
+                  placeholder="対応メモ・コメントを入力..."
+                  rows={2}
+                  className="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 focus:border-teal-500 focus:outline-none resize-none bg-white"
+                />
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => { if (confirm(`「${todo.title}」を削除しますか？`)) onDelete(todo.id) }}
+                    className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-red-500"
+                  >削除</button>
+                  <button
+                    onClick={() => onEdit(todo.id)}
+                    className="text-xs px-3 py-1.5 rounded-lg border border-blue-200 text-blue-500 hover:bg-blue-50"
+                  >✏ 編集</button>
+                  <button
+                    onClick={() => onUpdate(todo.id, { comment: getComment(todo) })}
+                    className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100"
+                  >保存</button>
+                  {!isDone && (
+                    <button
+                      onClick={() => onUpdate(todo.id, { status: 'done' })}
+                      className="text-xs px-3 py-1.5 rounded-lg bg-green-500 text-white hover:bg-green-600"
+                    >✓ 完了</button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )
       })}
-      {todos.length === 0 && (
+      {sorted.length === 0 && (
         <div className="text-center py-20 text-slate-400 text-sm">該当するTODOはありません</div>
       )}
     </div>
