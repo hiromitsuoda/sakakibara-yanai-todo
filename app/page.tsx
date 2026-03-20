@@ -229,11 +229,11 @@ export default function Home() {
 
   // ── Counts ────────────────────────────────────────────────
   const counts = useMemo(() => ({
-    overdue: todos.filter((t) => t.status === 'overdue').length,
-    todo:    todos.filter((t) => t.status === 'todo').length,
-    doing:   todos.filter((t) => t.status === 'doing').length,
-    done:    todos.filter((t) => t.status === 'done').length,
-  }), [todos])
+    overdue: filteredTodos.filter((t) => t.status === 'overdue').length,
+    todo:    filteredTodos.filter((t) => t.status === 'todo').length,
+    doing:   filteredTodos.filter((t) => t.status === 'doing').length,
+    done:    filteredTodos.filter((t) => t.status === 'done').length,
+  }), [filteredTodos])
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
@@ -281,7 +281,7 @@ export default function Home() {
 
           {/* 件数バッジ */}
           <span className="text-xs text-slate-500 font-semibold">
-            {filteredTodos.length} 件{filterMode === 'active' ? '（完了除く）' : ''}
+            {filteredTodos.length} 件表示
           </span>
 
           {/* 全件削除（テスト用） */}
