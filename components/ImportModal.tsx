@@ -293,7 +293,7 @@ export default function ImportModal({ onClose, onImport, resolveStaffId, existin
   // ── JSX ──────────────────────────────────────────────────
   return (
     <div className="modal-backdrop fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="modal-content bg-white rounded-2xl shadow-2xl w-full max-w-xl">
+      <div className="modal-content bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto">
 
         {/* Modal header */}
         <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100">
@@ -403,14 +403,14 @@ export default function ImportModal({ onClose, onImport, resolveStaffId, existin
 
             {/* 重複警告 */}
             {duplicateIndices.size > 0 && (
-              <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 text-xs text-amber-700 space-y-1">
+              <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 text-xs text-amber-700">
                 <p className="font-bold">⚠ {duplicateIndices.size}件の重複が検出されました</p>
-                <p className="text-amber-600">既に登録済みのデータと一致するため、デフォルトでチェックを外しています。</p>
-                <ul className="mt-1 space-y-0.5 text-amber-700">
+                <p className="text-amber-600 mt-0.5">既に登録済みのため、デフォルトでチェックを外しています。</p>
+                <ul className="mt-1.5 space-y-0.5 max-h-20 overflow-y-auto pr-1">
                   {Array.from(duplicateIndices).map((i) => (
-                    <li key={i} className="flex items-center gap-1">
+                    <li key={i} className="flex items-center gap-1 truncate">
                       <span>・</span>
-                      {parsedRows[i].link_no && <span className="font-bold">#{parsedRows[i].link_no}</span>}
+                      {parsedRows[i].link_no && <span className="font-bold shrink-0">#{parsedRows[i].link_no}</span>}
                       <span className="truncate">{parsedRows[i].title}</span>
                     </li>
                   ))}
